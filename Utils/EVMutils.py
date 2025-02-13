@@ -4,7 +4,6 @@ import time
 
 from multiprocessing.dummy import current_process
 from web3 import Web3
-from web3.middleware import geth_poa_middleware
 
 from Contract.RPC import RPC
 from requests import get
@@ -124,18 +123,6 @@ class EVM:
             return False
 
     @staticmethod
-    def checker_total_fee(chain: str, gas: float) -> bool:
-        """Checking the gas limit"""
-        PRICES_NATIVE = EVM.prices_network(chain)
-        gas = EVM.DecimalTO(gas, 18) * PRICES_NATIVE
-        if gas > MAX_GAS_CHARGE[chain]:
-            log().info(f'gas is too high : {gas}$ > {MAX_GAS_CHARGE[chain]}$. sleep and try again')
-            time.sleep(15)
-            return False
-        else:
-            return True
-
-    @staticmethod
     def sign_tx(web3: Web3, contract_txn: dict, private_key: str) -> str or bool:
         """transaction signature"""
         try:
@@ -220,18 +207,6 @@ class EVM:
                 x = lambda a: int(str(a).split('Thread-')[1].split()[0])
                 sleep_ = 15 * x(current_process())
                 time.sleep(sleep_)
-
-    @staticmethod
-    def check_gwei() -> None:
-        """Checking GWEI"""
-        w3 = EVM.web3('ethereum')
-        gas_price = w3.eth.gas_price
-        gwei_gas_price = w3.from_wei(gas_price, 'gwei')
-        while gwei_gas_price >= GWEI:
-            log().info(f'GWEI {gwei_gas_price} > {GWEI}')
-            gas_price = w3.eth.gas_price
-            gwei_gas_price = w3.from_wei(gas_price, 'gwei')
-            time.sleep(15)
 
     @staticmethod
     def sending_tx(web3: Web3, contract_txn: dict, chain: str, private_key: str,  retry: int, module_str: str):
@@ -331,79 +306,3 @@ class EVM:
             except BaseException:
                 inv_log().error(f'Eror waiting_coin {chain, address_coin, value}')
                 coins_value = 0
-
-    @staticmethod
-    def get_gas_prices(chain, tx_dict=None, retries=3):
-        data = {
-            "ethereum": {
-                "rpc": ["https://ethereum.blockpi.network/v1/rpc/public",
-                        "https://eth-rpc.gateway.pokt.network"]
-            },
-            'base': {
-                'rpc': ['https://base.drpc.org']
-            },
-        }
-        if tx_dict is None:
-            tx_dict = {}
-            # Получаем список доступных RPC
-        available_rpc = data[chain]["rpc"]
-        for rpc in available_rpc:
-            for _ in range(retries):
-                try:
-                    web3 = Web3(Web3.HTTPProvider(rpc))
-
-                    # Если сеть - Polygon или Avalanche, инжектируем geth_poa_middleware
-                    if chain in ["Polygon", "Avalanche"]:
-                        web3.middleware_onion.inject(geth_poa_middleware, layer=0)
-
-                    # Если сеть - BSC или Fantom, устанавливаем gasPrice и возвращаем tx_dict
-                    if chain in ["BSC", "Fantom"]:
-                        tx_dict['gasPrice'] = web3.eth.gas_price
-                        return tx_dict
-
-                    # Рассчитываем maxFeePerGas
-                    gas_price = web3.eth.generate_gas_price()
-                    if gas_price is None:
-                        gas_price = web3.eth.gas_price
-                    max_fee_per_gas = gas_price
-
-                    # Рассчитываем maxPriorityFeePerGas
-                    num_blocks = 5
-                    latest = web3.eth.block_number
-                    start_block = max(0, latest - num_blocks)
-
-                    total_priority_fees = 0
-                    total_txs = 0
-
-                    # Итерируем по блокам для вычисления средней стоимости газа
-                    for block_number in range(start_block, latest + 1):
-                        for _ in range(retries):
-                            try:
-                                block = web3.eth.get_block(block_number, full_transactions=True)
-                                break
-                            except Exception as e:
-                                if 'block not found' in str(e).lower():
-                                    time.sleep(10)
-                        else:
-                            continue
-
-                        for tx in block['transactions']:
-                            total_priority_fees += tx['gasPrice']
-                            total_txs += 1
-
-                    if total_txs == 0:
-                        raise Exception("\n   В последних N блоках не найдено транзакций")
-
-                    average_priority_fee = total_priority_fees // total_txs
-                    max_priority_fee_per_gas = min(average_priority_fee, max_fee_per_gas)
-
-                    # Добавляем в словарь полученные значения и возвращаем его
-                    tx_dict['maxFeePerGas'] = int(max_fee_per_gas * 1.1)
-                    tx_dict['maxPriorityFeePerGas'] = int(max_priority_fee_per_gas * 1.1)
-
-                    return tx_dict
-
-                except ConnectionError as e:
-                    # В случае ошибки выводим сообщение
-                    print(f"  Ошибка при подключении к {rpc}: {str(e)}")
-                    continue
