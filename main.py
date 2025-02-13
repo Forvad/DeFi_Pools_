@@ -14,14 +14,6 @@ address_nft = {'ETH-USDC': '0x827922686190790b37229fd06084350E74485b72'}
 
 pool_nft = {'ETH-USDC': '0xF33a96b5932D9E9B9A0eDA447AbD8C9d48d2e0c8'}
 
-# percentages_ = [1, 1]  # hiht, low
-#
-# amount0 = 0.01
-#
-# slippage = 5  # %
-
-# 7063840
-
 
 def check_pool_tick(address_pool):
     web3 = EVM.web3('base')
