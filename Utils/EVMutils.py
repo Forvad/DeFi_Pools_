@@ -125,14 +125,14 @@ class EVM:
     @staticmethod
     def sign_tx(web3: Web3, contract_txn: dict, private_key: str) -> str or bool:
         """transaction signature"""
-        try:
-            signed_tx = web3.eth.account.sign_transaction(contract_txn, private_key)
-            raw_tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
-            tx_hash = web3.to_hex(raw_tx_hash)
-            return tx_hash
-        except BaseException as error:
-            log().error(f'{error}')
-            return False
+        # try:
+        signed_tx = web3.eth.account.sign_transaction(contract_txn, private_key)
+        raw_tx_hash = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
+        tx_hash = web3.to_hex(raw_tx_hash)
+        return tx_hash
+        # except BaseException as error:
+        #     log().error(f'{error}')
+        #     return False
 
     @staticmethod
     def check_status_tx(chain: str, tx_hash: str) -> int:

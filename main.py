@@ -9,7 +9,7 @@ from config import percentages_, slippage, amount0, processingTime, private_key,
 
 addresses_pools = {'ETH-USDC': '0xb2cc224c1c9feE385f8ad6a55b4d94E92359DC59'}
 pool_token = {'ETH-USDC': [['0x4200000000000000000000000000000000000006', '0x827922686190790b37229fd06084350E74485b72'],
-                           ['0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', '0xcF77a3Ba9A5CA399B7c97c74d54e5b1Beb874E43']]}
+                           ['0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', '0x827922686190790b37229fd06084350E74485b72']]}
 address_nft = {'ETH-USDC': '0x827922686190790b37229fd06084350E74485b72'}
 
 pool_nft = {'ETH-USDC': '0xF33a96b5932D9E9B9A0eDA447AbD8C9d48d2e0c8'}

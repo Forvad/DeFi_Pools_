@@ -6,7 +6,7 @@ from os.path import isfile, join
 
 def open_abi(mode='') -> {str: str}:
     try:
-        mypath = Path('../aero/Abi/')
+        mypath = Path('../aerodrome/Abi/')
         list_files = [f for f in listdir(mypath) if isfile(join(mypath, f))]
         abi_ = {}
         for file in list_files:
