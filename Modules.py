@@ -6,12 +6,12 @@ from main import mint, check_id_nft, approve_NFT, deposit_withdraw_nft, decrease
 
 def mint_dep():
     mint(amount0, private_key, name_pools)
-    nft_id_ = check_id_nft(private_key, name_pools)
-    if nft_id_:
-        time.sleep(2)
-        approve_NFT(private_key, name_pools)
-        time.sleep(2)
-        deposit_withdraw_nft(nft_id_, private_key, name_pools)
+    # nft_id_ = check_id_nft(private_key)
+    # if nft_id_:
+    #     time.sleep(2)
+    #     approve_NFT(private_key, name_pools)
+    #     time.sleep(2)
+    #     deposit_withdraw_nft(nft_id_, private_key, name_pools)
 
 
 def withdraw():

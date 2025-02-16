@@ -1,10 +1,10 @@
 import time
 
-from Abi.abi import open_abi
 from Utils.EVMutils import EVM
-from web3 import Web3
 from Log.Loging import log
 from config import percentages_, slippage, amount0, processingTime, private_key, name_pools
+from Contract.Contracts import contract_withdrawal
+from web3.exceptions import ContractLogicError
 
 
 addresses_pools = {'ETH-USDC': '0xb2cc224c1c9feE385f8ad6a55b4d94E92359DC59'}
@@ -15,18 +15,13 @@ address_nft = {'ETH-USDC': '0x827922686190790b37229fd06084350E74485b72'}
 pool_nft = {'ETH-USDC': '0xF33a96b5932D9E9B9A0eDA447AbD8C9d48d2e0c8'}
 
 
-def check_pool_tick(address_pool):
-    web3 = EVM.web3('base')
-
-    contract = web3.eth.contract(address=Web3.to_checksum_address(address_pool),
-                                         abi=open_abi()['ETH-USD'])
+def check_pool_tick(name_pool):
+    _, contract = contract_withdrawal(name_pool)
     return contract.functions.slot0().call()
 
 
 def check_amount1(pool_tick, tickLow, tickHigh, value, address_pool):
-    web3 = EVM.web3('base')
-    contract = web3.eth.contract(address=Web3.to_checksum_address('0x0AD09A66af0154a84e86F761313d02d0abB6edd5'),
-                                 abi=open_abi()['chek_pool'])
+    _, contract = contract_withdrawal('check_amount1')
     return contract.functions.estimateAmount1(value,
                                               address_pool,
                                               pool_tick[0],
@@ -54,16 +49,21 @@ def calculation_tick(pool_tick, percentages):
 
 def mint(amount, private_key, name_poll, retry=0):
     amount0_ = int(amount * 10 ** 18)
-    web3 = EVM.web3('base')
+    web3, contract = contract_withdrawal('nft')
     wallet = web3.eth.account.from_key(private_key).address
     for i in pool_token[name_poll]:
         EVM.approve(amount, private_key, 'base', i[0], i[1])
-    pool_tick = check_pool_tick(addresses_pools[name_poll])
+    pool_tick = check_pool_tick(name_pools)
     tick_high, tick_low = calculation_tick(pool_tick[1], percentages_)
-    contract = web3.eth.contract(address=Web3.to_checksum_address(address_nft[name_poll]),
-                                 abi=open_abi()['nft'])
+
     amount1_ = check_amount1(pool_tick, tick_low, tick_high, int(amount0_), addresses_pools[name_poll])
-    tx = contract.functions.mint((pool_token[name_poll][0][0],
+    balance_WETH, balance_USDC = (EVM.check_balance(private_key, 'base', pool_token[name_poll][0][0])[0],
+                                  EVM.check_balance(private_key, 'base', pool_token[name_poll][1][0])[0])
+    if balance_WETH < int(amount0_) or balance_USDC < int(amount1_):
+        log().info('Введённый баланс больше того что мы имеем')
+        log().info(f'WETH | баланс -- {balance_WETH / 10 ** 18} | отправляем -- {amount0_ / 10 ** 18}')
+        log().info(f'USDC | баланс -- {round(balance_USDC / 10 ** 6, 2)} | отправляем -- {round(amount1_ / 10 ** 6, 2)}')
+        print(pool_token[name_poll][0][0],
                                  pool_token[name_poll][1][0],
                                  100,
                                  tick_low,
@@ -72,6 +72,21 @@ def mint(amount, private_key, name_poll, retry=0):
                                  amount1_,
                                  int(amount0_ * (1 - slippage / 100)),
                                  int(amount1_ * (1 - slippage / 100)),
+                                 wallet,
+                                 int(time.time()) + 1_000,
+                                 0)
+        time.sleep(15)
+        return mint(amount, private_key, name_poll, retry)
+
+    tx = contract.functions.mint((pool_token[name_poll][0][0],
+                                 pool_token[name_poll][1][0],
+                                 100,
+                                 tick_low,
+                                 tick_high,
+                                 amount0_,
+                                 amount1_,
+                                 0,  # int(amount0_ * (1 - slippage / 100)),
+                                 0,  # int(amount1_ * (1 - slippage / 100)),
                                  wallet,
                                  int(time.time()) + 1_000,
                                  0
@@ -86,7 +101,7 @@ def mint(amount, private_key, name_poll, retry=0):
     tx_bool = EVM.sending_tx(web3, tx, 'base', private_key, 1, module_str)
     if not tx_bool:
         log().error('Зафейлилась транза')
-        time.sleep(30)
+        time.sleep(15)
         if retry <= 3:
             return mint(amount, private_key, name_poll, retry + 1)
         else:
@@ -97,11 +112,9 @@ def mint(amount, private_key, name_poll, retry=0):
 
 
 def approve_NFT(private_key, name_poll, retry=0):
-    web3 = EVM.web3('base')
+    web3, contract = contract_withdrawal('nft')
     wallet = web3.eth.account.from_key(private_key).address
-    contract = web3.eth.contract(address=Web3.to_checksum_address(address_nft[name_poll]),
-                                 abi=open_abi()['nft'])
-    id_nft = check_id_nft(private_key, name_poll)
+    id_nft = check_id_nft(private_key)
     if id_nft:
         tx = contract.functions.approve(pool_nft[name_poll], id_nft).build_transaction({
             'from': wallet,
@@ -123,11 +136,10 @@ def approve_NFT(private_key, name_poll, retry=0):
 
             return True
 
+
 def deposit_withdraw_nft(id_nft, private_key, name_poll, withdraw=False, retry=0):
-    web3 = EVM.web3('base')
+    web3, contract = contract_withdrawal('pool_nft', name_poll)
     wallet = web3.eth.account.from_key(private_key).address
-    contract = web3.eth.contract(address=Web3.to_checksum_address(pool_nft[name_poll]),
-                                 abi=open_abi()['pool_nft'])
     if not withdraw:
         tx = contract.functions.deposit(id_nft)
     else:
@@ -154,15 +166,13 @@ def deposit_withdraw_nft(id_nft, private_key, name_poll, withdraw=False, retry=0
 
 
 def decreaseLiquidity(id_nft, private_key, name_poll, retry=0):
-    check_nft = check_id_nft(private_key, name_poll)
+    check_nft = check_id_nft(private_key)
     if not check_nft == id_nft:
         deposit_withdraw_nft(id_nft, private_key, name_pools, True)
         time.sleep(2)
-    web3 = EVM.web3('base')
+    web3, contract = contract_withdrawal('nft')
     max_token = int(10 * 10 ** 25)
     wallet = web3.eth.account.from_key(private_key).address
-    contract = web3.eth.contract(address=Web3.to_checksum_address(address_nft[name_poll]),
-                                 abi=open_abi()['nft'])
     liquidity = int(contract.functions.positions(id_nft).call()[7])
     tx_all = [contract.functions.decreaseLiquidity((id_nft, liquidity, 0, 0, int(time.time()) + 1_000)),
               contract.functions.collect((id_nft, wallet, max_token, max_token))
@@ -203,11 +213,9 @@ def decreaseLiquidity(id_nft, private_key, name_poll, retry=0):
 
 
 def burn_nft(id_nft, private_key, name_poll, retry=0):
-    web3 = EVM.web3('base')
+    web3, contract = contract_withdrawal('nft')
     max_token = int(10 * 10 ** 25)
     wallet = web3.eth.account.from_key(private_key).address
-    contract = web3.eth.contract(address=Web3.to_checksum_address(address_nft[name_poll]),
-                                 abi=open_abi()['nft'])
     tx_all = [contract.functions.collect((id_nft, wallet, max_token, max_token)),
               contract.functions.burn(id_nft)]
     bytes_tx = []
@@ -241,11 +249,9 @@ def burn_nft(id_nft, private_key, name_poll, retry=0):
         return True
 
 
-def check_id_nft(private_key, name_pool):
-    web3 = EVM.web3('base')
+def check_id_nft(private_key):
+    web3, contract = contract_withdrawal('nft')
     wallet = web3.eth.account.from_key(private_key).address
-    contract = web3.eth.contract(address=Web3.to_checksum_address(address_nft[name_pool]),
-                                 abi=open_abi()['nft'])
     balance = contract.functions.balanceOf(wallet).call()
     if balance > 1:
         return None
@@ -259,10 +265,41 @@ def check_id_nft(private_key, name_pool):
             return None
 
 
+def clear_nft(private_key_, name_pool):
+    web3, contact = contract_withdrawal('pool_nft', name_pool)
+    wallet = web3.eth.account.from_key(private_key_).address
+    while True:
+        try:
+            id_nft = contact.functions.stakedByIndex(wallet, 0).call()
+            deposit_withdraw_nft(id_nft, private_key_, name_pool, True)
+            time.sleep(2)
+            decreaseLiquidity(id_nft, private_key_, name_pool)
+            time.sleep(1)
+            burn_nft(id_nft, private_key_, name_pool)
+            time.sleep(5)
+        except ContractLogicError:
+            break
+    _, contract_nft = contract_withdrawal('nft')
+    balance_nft = contract_nft.functions.balanceOf(wallet).call()
+    if balance_nft >= 1:
+        for _ in range(balance_nft):
+            id_nft = contract_nft.functions.tokenOfOwnerByIndex(wallet, 0).call()
+            liquid = contract_nft.functions.positions(id_nft).call()[7]
+            if liquid > 0:
+                decreaseLiquidity(id_nft, private_key_, name_pool)
+                time.sleep(1)
+            burn_nft(id_nft, private_key_, name_pool)
+            time.sleep(3)
+
+
+
+
 def auto_():
     while True:
+        clear_nft(private_key, name_pools)
+        time.sleep(3)
         mint(amount0, private_key, name_pools)
-        nft_id = check_id_nft(private_key, name_pools)
+        nft_id = check_id_nft(private_key)
         if nft_id:
             time.sleep(2)
             approve_NFT(private_key, name_pools)
@@ -280,7 +317,9 @@ def auto_():
         time.sleep(processingTime[0] * 60)
 
 
+
 if __name__ == '__main__':
-    auto_()
+    clear_nft(private_key, name_pools)
+    # auto_()
 
 

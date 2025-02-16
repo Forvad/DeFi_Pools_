@@ -9,5 +9,3 @@ processingTime = [0.1, 0.1]  # время ожидания, время фарм�
 private_key = ''
 
 name_pools = 'ETH-USDC'  # ETH-USDC
-
-nft_id = ''
