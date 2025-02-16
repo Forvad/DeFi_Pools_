@@ -1,25 +1,21 @@
 import time
 
-from config import amount0, private_key, name_pools, nft_id
-from main import mint, check_id_nft, approve_NFT, deposit_withdraw_nft, decreaseLiquidity, burn_nft, auto_
+from config import amount0, private_key, name_pools
+from main import mint, check_id_nft, approve_NFT, deposit_withdraw_nft, auto_, clear_nft
 
 
 def mint_dep():
     mint(amount0, private_key, name_pools)
-    # nft_id_ = check_id_nft(private_key)
-    # if nft_id_:
-    #     time.sleep(2)
-    #     approve_NFT(private_key, name_pools)
-    #     time.sleep(2)
-    #     deposit_withdraw_nft(nft_id_, private_key, name_pools)
+    nft_id_ = check_id_nft(private_key)
+    if nft_id_:
+        time.sleep(2)
+        approve_NFT(private_key, name_pools)
+        time.sleep(2)
+        deposit_withdraw_nft(nft_id_, private_key, name_pools)
 
 
 def withdraw():
-    deposit_withdraw_nft(nft_id, private_key, name_pools, True)
-    time.sleep(2)
-    decreaseLiquidity(nft_id, private_key, name_pools)
-    time.sleep(1)
-    burn_nft(nft_id, private_key, name_pools)
+    clear_nft(private_key, name_pools)
 
 
 def main():
