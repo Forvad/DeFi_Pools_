@@ -2,19 +2,23 @@ import time
 
 from Utils.EVMutils import EVM
 from Log.Loging import log
-from config import percentages_, slippage, amount0, processingTime, private_key, name_pools
-from Contract.Contracts import contract_withdrawal
+from config import percentages_, slippage, amount0, processingTime, private_key, name_pools, auto_amount
+from Contract.Contracts import contract_withdrawal, pool_nft
 from web3.exceptions import ContractLogicError
 
 
 addresses_pools = {'ETH-USDC': '0xb2cc224c1c9feE385f8ad6a55b4d94E92359DC59',
-                   'ETH-cbBTC': '0x70aCDF2Ad0bf2402C957154f944c19Ef4e1cbAE1'}
+                   'ETH-cbBTC': '0x70aCDF2Ad0bf2402C957154f944c19Ef4e1cbAE1',
+                   "VIRTUAL-ETH": "0x3f0296BF652e19bca772EC3dF08b32732F93014A"
+                   }
 pool_token = {'ETH-USDC': [['0x4200000000000000000000000000000000000006', '0x827922686190790b37229fd06084350E74485b72'],
                            ['0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', '0x827922686190790b37229fd06084350E74485b72']],
               'ETH-cbBTC': [['0x4200000000000000000000000000000000000006', '0x827922686190790b37229fd06084350E74485b72'],
-                            ['0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf', '0x827922686190790b37229fd06084350E74485b72']]}
-pool_nft = {'ETH-USDC': '0xF33a96b5932D9E9B9A0eDA447AbD8C9d48d2e0c8',
-            'ETH-cbBTC': '0x41b2126661C673C2beDd208cC72E85DC51a5320a'}
+                            ['0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf', '0x827922686190790b37229fd06084350E74485b72']],
+              'VIRTUAL-ETH': [
+                  ['0x0b3e328455c4059EEb9e3f84b5543F74E24e7E1b', '0x827922686190790b37229fd06084350E74485b72'],
+                  ['0x4200000000000000000000000000000000000006', '0x827922686190790b37229fd06084350E74485b72']]
+              }
 
 
 def check_pool_tick(name_pool):
@@ -31,10 +35,19 @@ def check_amount1(pool_tick, tickLow, tickHigh, value, address_pool):
                                               tickHigh).call()
 
 
+def check_amount0(pool_tick, tickLow, tickHigh, value, address_pool):
+    _, contract = contract_withdrawal('check_amount1')
+    return contract.functions.estimateAmount0(value,
+                                              address_pool,
+                                              pool_tick[0],
+                                              tickLow,
+                                              tickHigh).call()
+
+
 def calculation_tick(pool_tick, percentages):
     for i in percentages:
         if i < 1:
-            raise 'Процент должен быть выше 1'
+            raise 'The percentage must be higher than 1'
     tick_high, tick_low = pool_tick + (pool_tick * -1 % 100), pool_tick - (100 - pool_tick * -1 % 100)
     high = 1
     low = 1
@@ -57,24 +70,23 @@ def mint(amount, private_key, name_poll, retry=0):
     tick_high, tick_low = calculation_tick(pool_tick[1], percentages_)
 
     amount1_ = check_amount1(pool_tick, tick_low, tick_high, int(amount0_), addresses_pools[name_poll])
-    balance_WETH, balance_USDC = (EVM.check_balance(private_key, 'base', pool_token[name_poll][0][0])[0],
-                                  EVM.check_balance(private_key, 'base', pool_token[name_poll][1][0])[0])
+    balance_1, decimal1 = EVM.check_balance(private_key, 'base', pool_token[name_poll][0][0])
+    balance_2, decimal2 = EVM.check_balance(private_key, 'base', pool_token[name_poll][1][0])
     for i in pool_token[name_poll]:
         if i == 0:
             amounts = amount0_
         else:
             amounts = amount1_
         EVM.approve(amounts, private_key, 'base', i[0], i[1])
-    if balance_WETH < int(amount0_) or balance_USDC < int(amount1_):
-        log().info('Введённый баланс больше того что мы имеем')
-        log().info(f'WETH | баланс -- {balance_WETH / 10 ** 18} | отправляем -- {amount0_ / 10 ** 18}')
-        if name_poll == 'ETH-USDC':
-            log().info(f'USDC | баланс -- {round(balance_USDC / 10 ** 6, 2)} | отправляем -- {round(amount1_ / 10 ** 6, 2)}')
-        elif name_poll == 'ETH-cbBTC':
-            log().info(
-                f'BTC | баланс -- {balance_USDC} | отправляем -- {amount1_}')
-        time.sleep(15)
-        return mint(amount, private_key, name_poll, retry)
+    if balance_1 < int(amount0_) or balance_2 < int(amount1_):
+        if auto_amount and balance_2 < int(amount1_):
+            amount1_ = balance_2
+            amount0_ = check_amount0(pool_tick, tick_low, tick_high, int(amount1_), addresses_pools[name_poll])
+        else:
+            time.sleep(15)
+            if auto_amount and balance_1 < int(amount0_):
+                amount = round(balance_1 / 10 ** decimal1, 5)
+            return mint(amount, private_key, name_poll, retry)
     tx = contract.functions.mint((pool_token[name_poll][0][0],
                                  pool_token[name_poll][1][0],
                                  100,
@@ -82,19 +94,21 @@ def mint(amount, private_key, name_poll, retry=0):
                                  tick_high,
                                  amount0_,
                                  amount1_,
-                                 0,  # int(amount0_ * (1 - slippage / 100)),
-                                 0,  # int(amount1_ * (1 - slippage / 100)),
+                                 0,
+                                 0,
                                  wallet,
                                  int(time.time()) + 1_000,
                                  0
                                   )).build_transaction({
-                               'from': wallet,
-                               'nonce': web3.eth.get_transaction_count(wallet),
-                               'chainId': web3.eth.chain_id,
-                               'gasPrice': web3.eth.gas_price,
-                               'gas': 0
-                            })
-    module_str = 'Минтим NFT'
+                                    'from': wallet,
+                                    'nonce': web3.eth.get_transaction_count(wallet),
+                                    'chainId': web3.eth.chain_id,
+                                    'gasPrice': web3.eth.gas_price,
+                                    'gas': 0
+                                    })
+    name = name_pools.split("-")
+    module_str = (f'Mint NFT | {pool_tick[1]} / {tick_low} / {tick_high} | {round(amount0_ / 10 ** decimal1, 5)} {name[0]} | '
+                  f'{round(amount1_ / 10 **  decimal2, 5)} {name[1]}')
     tx_bool = EVM.sending_tx(web3, tx, 'base', private_key, 1, module_str)
     if not tx_bool:
         log().error('Зафейлилась транза')
@@ -120,7 +134,7 @@ def approve_NFT(private_key, name_poll, retry=0):
             'gasPrice': web3.eth.gas_price,
             'gas': 0
         })
-        module_str = 'Делаем апрув NFT'
+        module_str = 'Approve the NFT'
         tx_bool = EVM.sending_tx(web3, tx, 'base', private_key, 1, module_str)
         if not tx_bool:
             log().error('Зафейлилась транза')
@@ -149,15 +163,15 @@ def deposit_withdraw_nft(id_nft, private_key, name_poll, withdraw=False, retry=0
         'gasPrice': web3.eth.gas_price,
         'gas': 0
     })
-    module_str = 'Стейкаем / Выводим NFT'
+    module_str = 'Stake NFT' if not withdraw else "Withdraw NFT"
     tx_bool = EVM.sending_tx(web3, tx, 'base', private_key, 1, module_str)
     if not tx_bool:
-        log().error('Зафейлилась транза')
+        log().error('Failed tx')
         time.sleep(5)
         if retry <= 3:
             return deposit_withdraw_nft(id_nft, private_key, name_poll, withdraw, retry + 1)
         else:
-            raise 'Не получается задепозитить либо вывести'
+            raise 'Unable to deposit or withdraw'
     else:
         return True
 
@@ -324,20 +338,16 @@ def test_withdraw(id_nft, name_poll, retry=0):
         'gasPrice': web3.eth.gas_price,
         'gas': 0
     })
-    module_str = 'Достаём ликвидность и клеймим награды'
+    module_str = 'Withdraw liquidity, claim rewards, and burn the NFT'
     tx_bool = EVM.sending_tx(web3, tx, 'base', private_key, 1, module_str)
     if not tx_bool:
         time.sleep(5)
-        log().error('Зафейлилась транза')
+        log().error('Filed tx')
         log().info(bytes_tx)
         if retry <= 3:
-            return decreaseLiquidity(id_nft, private_key, name_poll, retry + 1)
-        raise 'НЕ смолги достать ликвидность'
+            return test_withdraw(id_nft, name_poll, retry + 1)
+        raise "Couldn't withdraw liquidity"
     else:
-        time.sleep(1)
-        liquidity = int(contract.functions.positions(id_nft).call()[7])
-        if liquidity > 0:
-            return decreaseLiquidity(id_nft, private_key, name_poll, retry)
         return True
 
 
@@ -353,16 +363,14 @@ def auto_():
             time.sleep(2)
             deposit_withdraw_nft(nft_id, private_key, name_pools)
             time.sleep(2)
-            log().info(f'Начинаем фармить ---- 0 / {processingTime[1]} мин')
-            time.sleep(processingTime[1] * 60)
+            log().info(f'Farm for {processingTime[1]} seconds')
+            time.sleep(processingTime[1])
             deposit_withdraw_nft(nft_id, private_key, name_pools, True)
             time.sleep(2)
             test_withdraw(nft_id, name_pools)
-            # decreaseLiquidity(nft_id, private_key, name_pools)
-            # time.sleep(1)
-            # burn_nft(nft_id, private_key, name_pools)
-        log().info(f'Спим до следующего захода ----  0 / {processingTime[0]} мин')
-        time.sleep(processingTime[0] * 60)
+        log().info(f'Sleep for {processingTime[0]} seconds')
+        log().success(f"{'-' * 50}//{'-' * 50}")
+        time.sleep(processingTime[0])
 
 
 if __name__ == '__main__':

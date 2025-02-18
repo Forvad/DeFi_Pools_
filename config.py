@@ -1,11 +1,13 @@
 percentages_ = [1, 1]  # hiht, low
 
-amount0 = 0.001  # ETH
+amount0 = 200
+
+auto_amount = True
 
 slippage = 5  # %
 
-processingTime = [0.1, 0.1]  # время ожидания, время фарма; в минутах
+processingTime = [30, 10]  # время ожидания, время фарма; в секундах
 
 private_key = ''
 
-name_pools = 'ETH-USDC'  # ETH-USDC, ETH-cbBTC
+name_pools = 'VIRTUAL-ETH'  # ETH-USDC, ETH-cbBTC, VIRTUAL-ETH
