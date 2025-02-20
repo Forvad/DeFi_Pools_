@@ -125,27 +125,25 @@ def mint(amount, private_key, name_poll, retry=0):
 def approve_NFT(private_key, name_poll, retry=0):
     web3, contract = contract_withdrawal('nft')
     wallet = web3.eth.account.from_key(private_key).address
-    id_nft = check_id_nft(private_key)
-    if id_nft:
-        tx = contract.functions.approve(pool_nft[name_poll], id_nft).build_transaction({
-            'from': wallet,
-            'nonce': web3.eth.get_transaction_count(wallet),
-            'chainId': web3.eth.chain_id,
-            'gasPrice': web3.eth.gas_price,
-            'gas': 0
-        })
-        module_str = 'Approve the NFT'
-        tx_bool = EVM.sending_tx(web3, tx, 'base', private_key, 1, module_str)
-        if not tx_bool:
-            log().error('Зафейлилась транза')
-            time.sleep(5)
-            if retry <= 3:
-                return approve_NFT(private_key, name_poll, retry + 1)
-            else:
-                raise 'Не получается сделать апрув'
+    tx = contract.functions.setApprovalForAll(pool_nft[name_poll], True).build_transaction({
+        'from': wallet,
+        'nonce': web3.eth.get_transaction_count(wallet),
+        'chainId': web3.eth.chain_id,
+        'gasPrice': web3.eth.gas_price,
+        'gas': 0
+    })
+    module_str = f'Approve the NFT -> {pool_nft[name_poll]}'
+    tx_bool = EVM.sending_tx(web3, tx, 'base', private_key, 1, module_str)
+    if not tx_bool:
+        log().error('Зафейлилась транза')
+        time.sleep(5)
+        if retry <= 3:
+            return approve_NFT(private_key, name_poll, retry + 1)
         else:
+            raise 'Не получается сделать апрув'
+    else:
 
-            return True
+        return True
 
 
 def deposit_withdraw_nft(id_nft, private_key, name_poll, withdraw=False, retry=0):
@@ -358,8 +356,6 @@ def auto_():
         mint(amount0, private_key, name_pools)
         nft_id = check_id_nft(private_key)
         if nft_id:
-            time.sleep(2)
-            approve_NFT(private_key, name_pools)
             time.sleep(2)
             deposit_withdraw_nft(nft_id, private_key, name_pools)
             time.sleep(2)

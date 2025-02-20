@@ -220,7 +220,14 @@ class EVM:
                 time.sleep(30)
                 return False
         contract_txn['gasPrice'] = int(contract_txn['gasPrice'] * 1.5)
-        tx_hash = EVM.sign_tx(web3, contract_txn, private_key)
+        try:
+            tx_hash = EVM.sign_tx(web3, contract_txn, private_key)
+        except BaseException as error:
+            if "nonce too low" in str(error):
+                contract_txn["nonce"] = web3.eth.get_transaction_count(wallet)
+                tx_hash = EVM.sign_tx(web3, contract_txn, private_key)
+            else:
+                raise error
         time.sleep(2)
         status = EVM.check_status_tx(chain, tx_hash)
         tx_link = f'{RPC[chain]["scan"]}/{tx_hash}'

@@ -9,13 +9,15 @@ def mint_dep():
     nft_id_ = check_id_nft(private_key)
     if nft_id_:
         time.sleep(2)
-        approve_NFT(private_key, name_pools)
-        time.sleep(2)
         deposit_withdraw_nft(nft_id_, private_key, name_pools)
 
 
 def withdraw():
     clear_nft(private_key, name_pools)
+
+
+def approval():
+    approve_NFT(private_key, name_pools)
 
 
 def main():
@@ -29,12 +31,17 @@ def main():
                         ---
                         
                         3) Auto
+                        
+                        ---
+                        
+                        4) Approve the NFT
     ''')
     modul = int(input('Какой модуль крутим: '))
 
     modules = {1: mint_dep,
                2: withdraw,
                3: auto_,
+               4: approval,
                }
     func = modules[modul]
     func()
