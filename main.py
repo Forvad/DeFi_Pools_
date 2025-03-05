@@ -1,8 +1,10 @@
+import random
 import time
 
 from Utils.EVMutils import EVM
-from Log.Loging import log
-from config import percentages_, slippage, amount0, processingTime, private_key, name_pools, auto_amount
+from Log.Loging import log, inv_log
+from config import (percentages_,  amount0, processingTime, private_key, name_pools, auto_amount, random_sleep,
+                    random_sleep_)
 from Contract.Contracts import contract_withdrawal, pool_nft
 from web3.exceptions import ContractLogicError
 
@@ -79,14 +81,16 @@ def mint(amount, private_key, name_poll, retry=0):
             amounts = amount1_
         EVM.approve(amounts, private_key, 'base', i[0], i[1])
     if balance_1 < int(amount0_) or balance_2 < int(amount1_):
+        inv_log().info("Нехватаа баланса, ищем способ решения")
         if auto_amount and balance_2 < int(amount1_):
+            inv_log().info("не жостаточно 2 монеты переварачиваем")
             amount1_ = balance_2
             amount0_ = check_amount0(pool_tick, tick_low, tick_high, int(amount1_), addresses_pools[name_poll])
+        elif auto_amount and balance_1 < int(amount0_):
+            inv_log().info("не жостаточно 1, ставим сколько имеется")
+            amount0_ = balance_1
         else:
-            time.sleep(15)
-            if auto_amount and balance_1 < int(amount0_):
-                amount = round(balance_1 / 10 ** decimal1, 5)
-            return mint(amount, private_key, name_poll, retry)
+            raise "Минт крашнулся"
     tx = contract.functions.mint((pool_token[name_poll][0][0],
                                  pool_token[name_poll][1][0],
                                  100,
@@ -113,7 +117,7 @@ def mint(amount, private_key, name_poll, retry=0):
     if not tx_bool:
         log().error('Зафейлилась транза')
         time.sleep(15)
-        if retry <= 3:
+        if retry <= 5:
             return mint(amount, private_key, name_poll, retry + 1)
         else:
             raise 'Не получается заминтить НФТ'
@@ -162,16 +166,23 @@ def deposit_withdraw_nft(id_nft, private_key, name_poll, withdraw=False, retry=0
         'gas': 0
     })
     module_str = 'Stake NFT' if not withdraw else "Withdraw NFT"
-    tx_bool = EVM.sending_tx(web3, tx, 'base', private_key, 1, module_str)
-    if not tx_bool:
-        log().error('Failed tx')
-        time.sleep(5)
-        if retry <= 3:
+    EVM.sending_tx(web3, tx, 'base', private_key, 1, module_str)
+    time.sleep(2)
+    nft = check_nft_pool(name_poll, private_key)
+    if not withdraw and isinstance(nft, int) and nft == id_nft:
+        return True
+    elif withdraw and not nft:
+        return True
+    else:
+        if retry <= 5:
+            time.sleep(5)
+            if withdraw:
+                log().error(f'There was an issue with the withdrawal, trying again | {retry} / 5')
+            else:
+                log().error(f'There was an issue with the input, trying again | {retry} / 5')
             return deposit_withdraw_nft(id_nft, private_key, name_poll, withdraw, retry + 1)
         else:
             raise 'Unable to deposit or withdraw'
-    else:
-        return True
 
 
 def decreaseLiquidity(id_nft, private_key, name_poll, retry=0):
@@ -274,6 +285,16 @@ def check_id_nft(private_key):
             return None
 
 
+def check_nft_pool(name_pool, private_key_):
+    web3, contact = contract_withdrawal('pool_nft', name_pool)
+    wallet = web3.eth.account.from_key(private_key_).address
+    try:
+        id_nft = contact.functions.stakedByIndex(wallet, 0).call()
+        return id_nft
+    except ContractLogicError:
+        return None
+
+
 def clear_nft(private_key_, name_pool):
     web3, contact = contract_withdrawal('pool_nft', name_pool)
     wallet = web3.eth.account.from_key(private_key_).address
@@ -349,6 +370,13 @@ def test_withdraw(id_nft, name_poll, retry=0):
         return True
 
 
+def random_range(range1, range2):
+    if random.random() < 0.9:
+        return random.randint(range1[0], range1[1])
+    else:
+        return random.randint(range2[0], range2[1])
+
+
 def auto_():
     while True:
         clear_nft(private_key, name_pools)
@@ -359,17 +387,23 @@ def auto_():
             time.sleep(2)
             deposit_withdraw_nft(nft_id, private_key, name_pools)
             time.sleep(2)
-            log().info(f'Farm for {processingTime[1]} seconds')
-            time.sleep(processingTime[1])
+            sleep_ = random_range(random_sleep_[0], random_sleep_[1])
+            log().info(f'Farm for {processingTime[1]  if not random_sleep else sleep_} seconds')
+            time.sleep(processingTime[1] if not random_sleep else sleep_)
             deposit_withdraw_nft(nft_id, private_key, name_pools, True)
             time.sleep(2)
             test_withdraw(nft_id, name_pools)
+
         log().info(f'Sleep for {processingTime[0]} seconds')
         log().success(f"{'-' * 50}//{'-' * 50}")
         time.sleep(processingTime[0])
 
 
 if __name__ == '__main__':
-    print(calculation_tick(-266132, [1, 1]))
+    pool_tick = check_pool_tick(name_pools)
+    tick_high, tick_low = calculation_tick(pool_tick[1], percentages_)
+    print(pool_tick, tick_high, tick_low)
+    amount1_ = check_amount1(pool_tick, tick_low, tick_high, int(amount0 * 10 ** 18), addresses_pools[name_pools])
+    print(amount1_)
 
 
