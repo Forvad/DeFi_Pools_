@@ -64,14 +64,26 @@ def calculation_tick(pool_tick, percentages):
             return tick_high, tick_low
 
 
-def mint(amount, private_key, name_poll, retry=0):
+def mint(amount, private_key, name_poll, retry=0, check_amount=False):
     amount0_ = int(amount * 10 ** 18)
     web3, contract = contract_withdrawal('nft')
     wallet = web3.eth.account.from_key(private_key).address
-    pool_tick = check_pool_tick(name_pools)
-    tick_high, tick_low = calculation_tick(pool_tick[1], percentages_)
+    while True:
+        pool_tick = check_pool_tick(name_pools)
+        tick_high, tick_low = calculation_tick(pool_tick[1], percentages_)
+        amount1_ = check_amount1(pool_tick, tick_low, tick_high, int(amount0_), addresses_pools[name_poll])
+        balance_2, decimal2 = EVM.check_balance(private_key, 'base', pool_token[name_poll][1][0])
+        if check_amount:
+            log().info(f'Берём 2-ой монеты в пул: {amount1_ / 10 ** decimal2}')
+            input_ = input('Работает дальше? y/n: ')
+            if input_ == 'y':
+                break
+            else:
+                percentages_[0] = int(input('введите максимум %: '))
+                percentages_[1] = int(input('введите минимум %: '))
+        else:
+            break
 
-    amount1_ = check_amount1(pool_tick, tick_low, tick_high, int(amount0_), addresses_pools[name_poll])
     balance_1, decimal1 = EVM.check_balance(private_key, 'base', pool_token[name_poll][0][0])
     balance_2, decimal2 = EVM.check_balance(private_key, 'base', pool_token[name_poll][1][0])
     for i in pool_token[name_poll]:

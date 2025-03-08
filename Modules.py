@@ -5,7 +5,7 @@ from main import mint, check_id_nft, approve_NFT, deposit_withdraw_nft, auto_, c
 
 
 def mint_dep():
-    mint(amount0, private_key, name_pools)
+    mint(amount0, private_key, name_pools, check_amount=True)
     nft_id_ = check_id_nft(private_key)
     if nft_id_:
         time.sleep(2)
