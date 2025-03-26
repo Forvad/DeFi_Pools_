@@ -1,6 +1,8 @@
 percentages_ = [1, 1]  # hiht, low
 
-amount0 = 0.005
+min_tick = 0  # %
+
+amount0 = 0.1
 
 auto_amount = True
 
@@ -10,7 +12,7 @@ processingTime = [30, 60]  # время ожидания, время фарма;
 
 private_key = ''
 
-name_pools = 'ETH-cbBTC'  # ETH-USDC, ETH-cbBTC, VIRTUAL-ETH
+name_pools = 'ETH-USDC'  # ETH-USDC, ETH-cbBTC, VIRTUAL-ETH
 
 random_sleep = True
 

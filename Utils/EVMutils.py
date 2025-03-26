@@ -114,7 +114,7 @@ class EVM:
     def add_gas(web3: Web3, contract_txn: dict) -> dict or bool:
         """Adding gas to the transaction"""
         try:
-            pluser = [2, 2.5]
+            pluser = [3, 5]
             gasLimit = web3.eth.estimate_gas(contract_txn)
             contract_txn['gas'] = int(gasLimit * random.uniform(pluser[0], pluser[1]))
             return contract_txn
@@ -313,3 +313,31 @@ class EVM:
             except BaseException:
                 inv_log().error(f'Eror waiting_coin {chain, address_coin, value}')
                 coins_value = 0
+
+    @staticmethod
+    def get_prices(symbol):
+        """Find out the price of the coin"""
+        try:
+            response = get(url=f'https://api.binance.com/api/v3/ticker/price?symbol={symbol}USDT')
+            check = 'binance'
+            if response.status_code == 400:
+                result = response.json()
+                if result["msg"] == "Invalid symbol.":
+                    response = get(url=f'https://min-api.cryptocompare.com/data/price?fsym={symbol}&tsyms=USDT')
+                    check = 'cryptocompare'
+            if response.status_code != 200:
+                log().info('Limit on the number of requests, we sleep for 30 seconds')
+                log().info(f"status_code = {response.status_code}, text = {response.text}")
+                time.sleep(30)
+                return EVM.get_prices(symbol)
+            if check == 'binance':
+                result = response.json()
+                price = round(float(result['price']), 4)
+            else:
+                result = [response.json()]
+                price = float(result[0]['USDT'])
+            return price
+        except BaseException as error:
+            log().error(f"chain: {symbol}, error: {error}")
+            time.sleep(5)
+            return EVM.get_prices(symbol)

@@ -24,8 +24,13 @@ pool_token = {'ETH-USDC': [['0x4200000000000000000000000000000000000006', '0x827
 
 
 def check_pool_tick(name_pool):
-    _, contract = contract_withdrawal(name_pool)
-    return contract.functions.slot0().call()
+    try:
+        _, contract = contract_withdrawal(name_pool)
+        return contract.functions.slot0().call()
+    except BaseException as error:
+        log().error(error)
+        time.sleep(10)
+        return check_pool_tick(name_pool)
 
 
 def check_amount1(pool_tick, tickLow, tickHigh, value, address_pool):
@@ -135,7 +140,7 @@ def mint(amount, private_key, name_poll, retry=0, check_amount=False):
             raise 'Не получается заминтить НФТ'
 
     else:
-        return True
+        return pool_tick[1]
 
 
 def approve_NFT(private_key, name_poll, retry=0):
