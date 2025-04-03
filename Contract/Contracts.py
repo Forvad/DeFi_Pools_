@@ -30,5 +30,8 @@ def contract_withdrawal(name, name_pool=''):
     elif name == 'pool_nft':
         return web3, web3.eth.contract(
             address=Web3.to_checksum_address(pool_nft[name_pool]), abi=open_abi()['pool_nft'])
+    elif name == 'nft_uni':
+        return web3, web3.eth.contract(
+            address=Web3.to_checksum_address('0x03a520b32C04BF3bEEf7BEb72E919cf822Ed34f1'), abi=open_abi()['uni_abi'])
     else:
         return None

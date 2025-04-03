@@ -4,11 +4,12 @@ from Contract.Contracts import contract_withdrawal
 from DB.db import NFTDatabase
 from Lending.aave import AAVE
 from Utils.EVMutils import EVM
-from config import private_key, amount0, name_pools, percentages_, min_tick
+from config import private_key, amount0, name_pools, percentages_, min_tick, sleep_range, low_buy, proxy
 from Log.Loging import log
 from main import check_pool_tick, calculation_tick, check_amount1, addresses_pools, pool_token, clear_nft, mint, \
     check_id_nft, deposit_withdraw_nft, test_withdraw
 from DEX.ODOS import swap
+from UNI.Uniswap import UniSwap
 
 from web3.exceptions import ContractLogicError
 
@@ -44,17 +45,18 @@ def check_tick(tick_high, low_tick, initial_tick=None, first_pass=False):
             return False, 3
         else:
             return True, 0
+    elif pool_tick <= low_tick and low_buy:
+        return False, 3
+
     else:
         return True, 0
 
 
-def lending_strategy():
-    amount0_ = int(amount0 * 10 ** 18)
+def lending_strategy(Uni=False):
     lending_aave = AAVE(private_key)
-    web3, contract = contract_withdrawal('nft')
-    wallet = web3.eth.account.from_key(private_key).address
     pool_tick = check_pool_tick(name_pools)
     initial_tick = pool_tick[1]
+    uni_swap = UniSwap(proxy)
     first_pass = False
     while True:
         nft_ = check_nft()
@@ -65,13 +67,19 @@ def lending_strategy():
             check_ = None
         if not check_:
             pool_tick = check_pool_tick(name_pools)
-            mint(amount0, private_key, name_pools)
-            tick_high, tick_low = calculation_tick(pool_tick[1], percentages_)
-            nft_id = check_id_nft(private_key)
+            if Uni:
+                uni_swap.mint()
+                tick_high, tick_low = uni_swap.calculation_tick(pool_tick[1], percentages_)
+                nft_id = uni_swap.check_id_nft()
+            else:
+                mint(amount0, private_key, name_pools)
+                tick_high, tick_low = calculation_tick(pool_tick[1], percentages_)
+                nft_id = check_id_nft(private_key)
             if nft_id:
                 db = NFTDatabase()
                 db.add_nft(nft_id, initial_tick, tick_high, tick_low, first_pass)
-                deposit_withdraw_nft(nft_id, private_key, name_pools)
+                if not Uni:
+                    deposit_withdraw_nft(nft_id, private_key, name_pools)
         else:
             log().info(
                 f"Найден NFT: id={check_.nft_id}, initial_tick={check_.initial_tick}, high_tick={check_.high_tick},"
@@ -87,11 +95,15 @@ def lending_strategy():
         while ticker:
             ticker, end_ticker = check_tick(tick_high, tick_low, initial_tick, first_pass)
             if ticker:
-                time.sleep(600)
+                time.sleep(100)
         time.sleep(10)
-        test_withdraw(nft_id, name_pools)
+        if Uni:
+            uni_swap.test_withdraw(nft_id, name_pools)
+        else:
+            test_withdraw(nft_id, name_pools)
         time.sleep(5)
         balance_WETH, _ = EVM.check_balance(private_key, 'base', lending_aave.tokens['WETH'])
+        pool_tick = check_pool_tick(name_pools)
         if end_ticker == 2:
             log().info('swap end WETH -> USDC')
             swap(lending_aave.tokens['WETH'], lending_aave.tokens['USDC'], balance_WETH)
@@ -99,14 +111,22 @@ def lending_strategy():
                 lending_aave.func_contract(1, 'USDC', 'repay')
             break
         elif end_ticker == 3:
+            if sleep_range[1]:
+                log().info(f'SLEEP {sleep_range[1]} sek')
+                time.sleep(sleep_range[1])
             if balance_WETH / 10 ** 18 > amount0:
                 log().info('swap WETH -> USDC')
                 swap(lending_aave.tokens['WETH'], lending_aave.tokens['USDC'], int(balance_WETH - amount0 * 10 ** 18))
         else:
+            if sleep_range[0]:
+                log().info(f'SLEEP {sleep_range[0]} sek')
+                time.sleep(sleep_range[0])
             if balance_WETH < amount0 * 10 ** 18:
                 amount_swap = int(((amount0 - balance_WETH / 10 ** 18) * EVM.get_prices('ETH')) * 10 ** 6)
                 log().info('swap USDC -> WETH')
                 log().info(amount_swap)
-                swap(lending_aave.tokens['USDC'], lending_aave.tokens['WETH'], amount_swap)
+                if amount_swap > 10 * 10 ** 6:
+                    swap(lending_aave.tokens['USDC'], lending_aave.tokens['WETH'], amount_swap)
+            if pool_tick[1] < initial_tick:
+                first_pass = True
         time.sleep(3)
-        first_pass = True

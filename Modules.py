@@ -39,7 +39,13 @@ def main():
                         
                         ---
                         
-                        5) Strategy lending
+                        5) Strategy lending aerodrome
+                        
+                        ---
+                        
+                        6) Strategy lending UniSwap
+                        
+                        ---
                         
                         
     ''')
@@ -49,10 +55,14 @@ def main():
                2: withdraw,
                3: auto_,
                4: approval,
-               5: lending_strategy
+               5: lending_strategy,
+               6: lending_strategy
                }
     func = modules[modul]
-    func()
+    if modul == 6:
+        func(True)
+    else:
+        func
 
 
 if __name__ == '__main__':

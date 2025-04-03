@@ -64,6 +64,6 @@ RPC = {
 
     'zora': {'rpc': 'https://rpc.zora.co', 'scan': 'https://explorer.zora.co/tx', 'token': 'ETH', 'chain_id': '7777777'},
 
-    'base': {'rpc': 'https://base.lava.build', 'scan': 'https://basescan.org/tx', 'token': 'ETH',
+    'base': {'rpc': 'https://developer-access-mainnet.base.org', 'scan': 'https://basescan.org/tx', 'token': 'ETH',
              'chain_id': '8453'},
 }

@@ -219,7 +219,7 @@ class EVM:
                 log().info(f'try again | {wallet}')
                 time.sleep(30)
                 return False
-        contract_txn['gasPrice'] = int(contract_txn['gasPrice'] * 1.5)
+        # contract_txn['gasPrice'] = int(contract_txn['gasPrice'] * 1.5)
         try:
             tx_hash = EVM.sign_tx(web3, contract_txn, private_key)
         except BaseException as error:

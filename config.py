@@ -1,8 +1,14 @@
-percentages_ = [1, 1]  # hiht, low
+proxy = ""
+
+percentages_ = [0.3, 0.3]  # hiht, low
 
 min_tick = 0  # %
 
-amount0 = 0.1
+sleep_range = [300, 500]  # hiht, low
+
+low_buy = True
+
+amount0 = 0.001
 
 auto_amount = True
 
