@@ -122,7 +122,7 @@ def lending_strategy(Uni=False):
                 log().info(f'SLEEP {sleep_range[0]} sek')
                 time.sleep(sleep_range[0])
             if balance_WETH < amount0 * 10 ** 18:
-                amount_swap = int(((amount0 - balance_WETH / 10 ** 18) * EVM.get_prices('ETH')) * 10 ** 6)
+                amount_swap = int(((amount0 - balance_WETH / 10 ** 18) * EVM.get_prices('ETH') * 1.01) * 10 ** 6)
                 log().info('swap USDC -> WETH')
                 log().info(amount_swap)
                 if amount_swap > 10 * 10 ** 6:

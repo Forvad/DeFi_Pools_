@@ -110,7 +110,18 @@ class UniSwap:
                 amount0_ = balance_1
             else:
                 raise "Минт крашнулся"
-        data = self.create_tx(tick_low, tick_high, wallet)
+        name = name_pools.split("-")
+        log().info(
+            f'Mint NFT | {pool_tick[1]} / {tick_low} / {tick_high} | {round(amount0_ / 10 ** decimal1, 5)} {name[0]} | '
+            f'{round(amount1_ / 10 ** decimal2, 5)} {name[1]}')
+        while True:
+            data = self.create_tx(tick_low, tick_high, wallet)
+            if data.get("create"):
+                break
+            else:
+                log().error(data)
+                time.sleep(10)
+
         tx = {
             "data": data["create"]["data"],
             "to": data["create"]["to"],
@@ -135,7 +146,7 @@ class UniSwap:
         else:
             return pool_tick[1]
 
-    def create_tx(self, tick_low, tick_high, address):
+    def create_tx(self, tick_low, tick_high, address) -> dict:
         try:
             headers = {
                 'accept': '*/*',
