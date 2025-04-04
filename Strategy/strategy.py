@@ -98,7 +98,7 @@ def lending_strategy(Uni=False):
                 time.sleep(100)
         time.sleep(10)
         if Uni:
-            uni_swap.test_withdraw(nft_id, name_pools)
+            uni_swap.test_withdraw(nft_id)
         else:
             test_withdraw(nft_id, name_pools)
         time.sleep(5)

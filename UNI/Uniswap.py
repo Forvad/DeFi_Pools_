@@ -110,27 +110,41 @@ class UniSwap:
                 amount0_ = balance_1
             else:
                 raise "Минт крашнулся"
-        name = name_pools.split("-")
-        log().info(
-            f'Mint NFT | {pool_tick[1]} / {tick_low} / {tick_high} | {round(amount0_ / 10 ** decimal1, 5)} {name[0]} | '
-            f'{round(amount1_ / 10 ** decimal2, 5)} {name[1]}')
-        while True:
-            data = self.create_tx(tick_low, tick_high, wallet)
-            if data.get("create"):
-                break
-            else:
-                log().error(data)
-                time.sleep(10)
-
-        tx = {
-            "data": data["create"]["data"],
-            "to": data["create"]["to"],
+        # while True:
+        #     data = self.create_tx(tick_low, tick_high, wallet)
+        #     if data.get("create"):
+        #         break
+        #     else:
+        #         log().error(data)
+        #         time.sleep(10)
+        #
+        # tx = {
+        #     "data": data["create"]["data"],
+        #     "to": data["create"]["to"],
+        #     'from': wallet,
+        #         'nonce': web3.eth.get_transaction_count(wallet),
+        #         'chainId': web3.eth.chain_id,
+        #         'gasPrice': web3.eth.gas_price,
+        #         'gas': 0
+        # }
+        tx = contract.functions.mint((self.pool_token[name_pools][0][0],
+                                      self.pool_token[name_pools][1][0],
+                                      500,
+                                      tick_low,
+                                      tick_high,
+                                      amount0_,
+                                      amount1_,
+                                      0,
+                                      0,
+                                      wallet,
+                                      int(time.time()) + 1_000
+                                      )).build_transaction({
             'from': wallet,
-                'nonce': web3.eth.get_transaction_count(wallet),
-                'chainId': web3.eth.chain_id,
-                'gasPrice': web3.eth.gas_price,
-                'gas': 0
-        }
+            'nonce': web3.eth.get_transaction_count(wallet),
+            'chainId': web3.eth.chain_id,
+            'gasPrice': web3.eth.gas_price,
+            'gas': 0
+        })
         name = name_pools.split("-")
         module_str = (f'Mint NFT | {pool_tick[1]} / {tick_low} / {tick_high} | {round(amount0_ / 10 ** decimal1, 5)} {name[0]} | '
                       f'{round(amount1_ / 10 **  decimal2, 5)} {name[1]}')

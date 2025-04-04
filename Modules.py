@@ -62,7 +62,7 @@ def main():
     if modul == 6:
         func(True)
     else:
-        func
+        func()
 
 
 if __name__ == '__main__':
