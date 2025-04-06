@@ -2,7 +2,7 @@ from web3 import Web3
 
 from Abi.abi import open_abi
 from Utils.EVMutils import EVM
-
+from config import name_pools
 
 pool_nft = {'ETH-USDC': '0xF33a96b5932D9E9B9A0eDA447AbD8C9d48d2e0c8',
             'ETH-cbBTC': '0x41b2126661C673C2beDd208cC72E85DC51a5320a',
@@ -31,7 +31,19 @@ def contract_withdrawal(name, name_pool=''):
         return web3, web3.eth.contract(
             address=Web3.to_checksum_address(pool_nft[name_pool]), abi=open_abi()['pool_nft'])
     elif name == 'nft_uni':
-        return web3, web3.eth.contract(
-            address=Web3.to_checksum_address('0x03a520b32C04BF3bEEf7BEb72E919cf822Ed34f1'), abi=open_abi()['uni_abi'])
+        if name_pools == 'ETH-USDC-base':
+            return web3, web3.eth.contract(
+                address=Web3.to_checksum_address('0x03a520b32C04BF3bEEf7BEb72E919cf822Ed34f1'),
+                abi=open_abi()['uni_abi'])
+        elif name_pools == 'ETH-USDC-arb':
+            web3 = EVM.web3('arbitrum')
+            return web3, web3.eth.contract(
+                address=Web3.to_checksum_address('0xC36442b4a4522E871399CD717aBDD847Ab11FE88'),
+                abi=open_abi()['uni_abi'])
+        elif name_pools == 'ETH-USDC-eth':
+            web3 = EVM.web3('ethereum')
+            return web3, web3.eth.contract(
+                address=Web3.to_checksum_address('0xC36442b4a4522E871399CD717aBDD847Ab11FE88slava6680'),
+                abi=open_abi()['uni_abi'])
     else:
         return None

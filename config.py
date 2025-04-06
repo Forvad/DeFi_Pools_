@@ -1,5 +1,3 @@
-proxy = ""
-
 percentages_ = [0.3, 0.3]  # hiht, low
 
 min_tick = 0  # %
@@ -8,7 +6,9 @@ sleep_range = [300, 500]  # hiht, low
 
 low_buy = True
 
-amount0 = 0.001
+constant_cycle = True  # работа без выхода в бу
+
+amount0 = 0.078
 
 auto_amount = True
 
@@ -18,7 +18,7 @@ processingTime = [30, 60]  # время ожидания, время фарма;
 
 private_key = ''
 
-name_pools = 'ETH-USDC'  # ETH-USDC, ETH-cbBTC, VIRTUAL-ETH
+name_pools = 'ETH-USDC-arb'  # aero: ETH-USDC, ETH-cbBTC, VIRTUAL-ETH; uni: ETH-USDC-arb, ETH-USDC-base, ETH-USDC-eth
 
 random_sleep = True
 

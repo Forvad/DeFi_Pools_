@@ -1,26 +1,53 @@
-import random
 import time
 
 import requests
 
 from Utils.EVMutils import EVM
 from Log.Loging import log, inv_log
-from config import (percentages_,  amount0, processingTime, private_key, name_pools, auto_amount, random_sleep,
-                    random_sleep_)
-from Contract.Contracts import contract_withdrawal, pool_nft
-from web3.exceptions import ContractLogicError
+from config import percentages_,  amount0, private_key, name_pools, auto_amount
+from Contract.Contracts import contract_withdrawal
 
 
 class UniSwap:
-    addresses_pools = {'ETH-USDC': '0xd0b53D9277642d899DF5C87A3966A349A798F224'
+    chain = {
+        'ETH-USDC-base': 'base',
+        'ETH-USDC-arb': 'arbitrum',
+        'ETH-USDC-eth': 'ethereum'
+    }
+    addresses_pools = {'ETH-USDC-base': '0xd0b53D9277642d899DF5C87A3966A349A798F224',
+                       'ETH-USDC-arb': '0xC6962004f452bE9203591991D15f6b388e09E8D0',
+                       'ETH-USDC-eth': '0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640'
                        }
-    pool_token = {'ETH-USDC': [['0x4200000000000000000000000000000000000006', '0x03a520b32C04BF3bEEf7BEb72E919cf822Ed34f1'],
-                               ['0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', '0x03a520b32C04BF3bEEf7BEb72E919cf822Ed34f1']],
-                  'ETH-cbBTC': [['0x4200000000000000000000000000000000000006', '0x827922686190790b37229fd06084350E74485b72'],
-                                ['0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf', '0x827922686190790b37229fd06084350E74485b72']],
-                  'VIRTUAL-ETH': [
-                      ['0x0b3e328455c4059EEb9e3f84b5543F74E24e7E1b', '0x827922686190790b37229fd06084350E74485b72'],
-                      ['0x4200000000000000000000000000000000000006', '0x827922686190790b37229fd06084350E74485b72']]
+    pool_token = {'ETH-USDC-base': [
+        [
+            '0x4200000000000000000000000000000000000006',
+            '0x03a520b32C04BF3bEEf7BEb72E919cf822Ed34f1'
+         ],
+        [
+            '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+            '0x03a520b32C04BF3bEEf7BEb72E919cf822Ed34f1'
+        ],
+    ],
+            'ETH-USDC-arb': [
+                [
+                    '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1',
+                    '0xC36442b4a4522E871399CD717aBDD847Ab11FE88'
+                ],
+                [
+                    '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
+                    '0xC36442b4a4522E871399CD717aBDD847Ab11FE88'
+                ],
+            ],
+            'ETH-USDC-eth': [
+            [
+                '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+                '0xC36442b4a4522E871399CD717aBDD847Ab11FE88'
+            ],
+            [
+                '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
+                '0xC36442b4a4522E871399CD717aBDD847Ab11FE88'
+            ],
+        ],
                   }
 
     def __init__(self, proxy=None):
@@ -34,7 +61,7 @@ class UniSwap:
 
     def check_pool_tick(self, name_pool):
         try:
-            _, contract = contract_withdrawal(name_pool)
+            _, contract = contract_withdrawal('ETH-USDC')
             return contract.functions.slot0().call()
         except BaseException as error:
             log().error(error)
@@ -42,7 +69,8 @@ class UniSwap:
             return self.check_pool_tick(name_pool)
 
     @staticmethod
-    def check_amount1(pool_tick, tickLow, tickHigh, value, address_pool):
+    def check_amount1(pool_tick, tickLow, tickHigh, value):
+        address_pool = UniSwap.addresses_pools['ETH-USDC-base']
         _, contract = contract_withdrawal('check_amount1')
         return contract.functions.estimateAmount1(value,
                                                   address_pool,
@@ -51,7 +79,8 @@ class UniSwap:
                                                   tickHigh).call()
 
     @staticmethod
-    def check_amount0(pool_tick, tickLow, tickHigh, value, address_pool):
+    def check_amount0(pool_tick, tickLow, tickHigh, value):
+        address_pool = UniSwap.addresses_pools['ETH-USDC-base']
         _, contract = contract_withdrawal('check_amount1')
         return contract.functions.estimateAmount0(value,
                                                   address_pool,
@@ -69,96 +98,92 @@ class UniSwap:
 
     @staticmethod
     def check_id_nft():
-        web3, contract = contract_withdrawal('nft_uni')
-        wallet = web3.eth.account.from_key(private_key).address
-        balance = contract.functions.balanceOf(wallet).call()
-        if balance > 1:
-            return None
-
-        elif balance == 1:
-            id_nft = contract.functions.tokenOfOwnerByIndex(wallet, balance - 1).call()
-            liquid = contract.functions.positions(id_nft).call()[7]
-            if liquid > 0:
-                return id_nft
-            else:
-                return None
+        try:
+            web3, contract = contract_withdrawal('nft_uni')
+            wallet = web3.eth.account.from_key(private_key).address
+            balance = contract.functions.balanceOf(wallet).call()
+            if balance >= 1:
+                return contract.functions.tokenOfOwnerByIndex(wallet, balance - 1).call()
+        except BaseException as error:
+            log().error(error)
+            time.sleep(10)
+            return UniSwap.check_id_nft()
 
     def mint(self, retry=0):
-        amount0_ = int(amount0 * 10 ** 18)
-        web3, contract = contract_withdrawal('nft_uni')
-        wallet = web3.eth.account.from_key(private_key).address
-        pool_tick = self.check_pool_tick(name_pools)
-        tick_high, tick_low = self.calculation_tick(pool_tick[1], percentages_)
-        amount1_ = self.check_amount1(pool_tick, tick_low, tick_high, int(amount0_), self.addresses_pools[name_pools])
-        balance_1, decimal1 = EVM.check_balance(private_key, 'base', self.pool_token[name_pools][0][0])
-        balance_2, decimal2 = EVM.check_balance(private_key, 'base', self.pool_token[name_pools][1][0])
-        for i in self.pool_token[name_pools]:
-            if i == 0:
-                amounts = amount0_
+        try:
+            amount0_ = int(amount0 * 10 ** 18)
+            web3, contract = contract_withdrawal('nft_uni')
+            wallet = web3.eth.account.from_key(private_key).address
+            pool_tick = self.check_pool_tick(name_pools)
+            tick_high, tick_low = self.calculation_tick(pool_tick[1], percentages_)
+            amount1_ = self.check_amount1(pool_tick, tick_low, tick_high, int(amount0_))
+            balance_1, decimal1 = EVM.check_balance(private_key, self.chain[name_pools], self.pool_token[name_pools][0][0])
+            balance_2, decimal2 = EVM.check_balance(private_key, self.chain[name_pools], self.pool_token[name_pools][1][0])
+            for i in self.pool_token[name_pools]:
+                if i == 0:
+                    amounts = amount0_
+                else:
+                    amounts = amount1_
+                EVM.approve(amounts, private_key, self.chain[name_pools], i[0], i[1])
+            if balance_1 < int(amount0_) or balance_2 < int(amount1_):
+                inv_log().info("Нехватаа баланса, ищем способ решения")
+                if auto_amount and balance_2 < int(amount1_):
+                    inv_log().info("не жостаточно 2 монеты переварачиваем")
+                    amount1_ = balance_2
+                    amount0_ = self.check_amount0(pool_tick, tick_low, tick_high, int(amount1_))
+                elif auto_amount and balance_1 < int(amount0_):
+                    inv_log().info("не жостаточно 1, ставим сколько имеется")
+                    amount0_ = balance_1
+                else:
+                    raise "Минт крашнулся"
+            tx = contract.functions.mint(
+                (
+                    self.pool_token[name_pools][0][0],
+                    self.pool_token[name_pools][1][0],
+                    500,
+                    tick_low,
+                    tick_high,
+                    amount0_,
+                    amount1_,
+                    0,
+                    0,
+                    wallet,
+                    int(time.time()) + 1_000
+                    )).build_transaction(
+                {
+                    'from': wallet,
+                    'nonce': web3.eth.get_transaction_count(wallet),
+                    'chainId': web3.eth.chain_id,
+                    'gasPrice': web3.eth.gas_price,
+                    'gas': 0
+                }
+            )
+            name = name_pools.split("-")
+            module_str = (f'Mint NFT | {pool_tick[1]} / {tick_low} / {tick_high} | {round(amount0_ / 10 ** decimal1, 5)} '
+                          f'{name[0]} | {round(amount1_ / 10 **  decimal2, 5)} {name[1]}')
+            tx_bool = EVM.sending_tx(web3, tx, self.chain[name_pools], private_key, 1, module_str)
+            if not tx_bool:
+                log().error('Зафейлилась транза')
+                time.sleep(15)
+                if retry <= 5:
+                    return self.mint(retry + 1)
+                else:
+                    raise 'Не получается заминтить НФТ'
+
             else:
-                amounts = amount1_
-            EVM.approve(amounts, private_key, 'base', i[0], i[1])
-        if balance_1 < int(amount0_) or balance_2 < int(amount1_):
-            inv_log().info("Нехватаа баланса, ищем способ решения")
-            if auto_amount and balance_2 < int(amount1_):
-                inv_log().info("не жостаточно 2 монеты переварачиваем")
-                amount1_ = balance_2
-                amount0_ = self.check_amount0(pool_tick, tick_low, tick_high, int(amount1_),
-                                              self.addresses_pools[name_pools])
-            elif auto_amount and balance_1 < int(amount0_):
-                inv_log().info("не жостаточно 1, ставим сколько имеется")
-                amount0_ = balance_1
-            else:
-                raise "Минт крашнулся"
-        # while True:
-        #     data = self.create_tx(tick_low, tick_high, wallet)
-        #     if data.get("create"):
-        #         break
-        #     else:
-        #         log().error(data)
-        #         time.sleep(10)
-        #
-        # tx = {
-        #     "data": data["create"]["data"],
-        #     "to": data["create"]["to"],
-        #     'from': wallet,
-        #         'nonce': web3.eth.get_transaction_count(wallet),
-        #         'chainId': web3.eth.chain_id,
-        #         'gasPrice': web3.eth.gas_price,
-        #         'gas': 0
-        # }
-        tx = contract.functions.mint((self.pool_token[name_pools][0][0],
-                                      self.pool_token[name_pools][1][0],
-                                      500,
-                                      tick_low,
-                                      tick_high,
-                                      amount0_,
-                                      amount1_,
-                                      0,
-                                      0,
-                                      wallet,
-                                      int(time.time()) + 1_000
-                                      )).build_transaction({
-            'from': wallet,
-            'nonce': web3.eth.get_transaction_count(wallet),
-            'chainId': web3.eth.chain_id,
-            'gasPrice': web3.eth.gas_price,
-            'gas': 0
-        })
-        name = name_pools.split("-")
-        module_str = (f'Mint NFT | {pool_tick[1]} / {tick_low} / {tick_high} | {round(amount0_ / 10 ** decimal1, 5)} {name[0]} | '
-                      f'{round(amount1_ / 10 **  decimal2, 5)} {name[1]}')
-        tx_bool = EVM.sending_tx(web3, tx, 'base', private_key, 1, module_str)
-        if not tx_bool:
-            log().error('Зафейлилась транза')
-            time.sleep(15)
+                time.sleep(15)
+                if self.check_id_nft():
+                    return pool_tick[1]
+                else:
+                    log().error("Минт не проше́л пробуем ещ́ё раз")
+                    return self.mint()
+        except BaseException as error:
+            log().error(error)
+            time.sleep(10)
             if retry <= 5:
                 return self.mint(retry + 1)
             else:
-                raise 'Не получается заминтить НФТ'
-
-        else:
-            return pool_tick[1]
+                raise 'Не вышло'
 
     def create_tx(self, tick_low, tick_high, address) -> dict:
         try:
@@ -210,6 +235,11 @@ class UniSwap:
             return self.create_tx(tick_low, tick_high, address)
 
     def test_withdraw(self, id_nft, retry=0):
+        while not id_nft:
+            if not id_nft:
+                id_nft = self.check_id_nft()
+                log().error(f"Не передали NFT id ищем.... --- {id_nft}")
+            time.sleep(10)
         web3, contract = contract_withdrawal('nft_uni')
         max_token = 340282366920938463463374607431768211455
         wallet = web3.eth.account.from_key(private_key).address
@@ -239,7 +269,7 @@ class UniSwap:
             'gas': 0
         })
         module_str = 'Withdraw liquidity, claim rewards, and burn the NFT'
-        tx_bool = EVM.sending_tx(web3, tx, 'base', private_key, 1, module_str)
+        tx_bool = EVM.sending_tx(web3, tx, self.chain[name_pools], private_key, 1, module_str)
         if not tx_bool:
             time.sleep(5)
             log().error('Filed tx')
@@ -247,6 +277,11 @@ class UniSwap:
                 return self.test_withdraw(id_nft, retry + 1)
             raise "Couldn't withdraw liquidity"
         else:
+            time.sleep(5)
+            id_ = self.check_id_nft()
+            if id_:
+                if id_ == id_nft:
+                    return self.test_withdraw(id_nft)
             return True
 
     def burn_nft(self, id_nft, retry=0):
@@ -280,7 +315,7 @@ class UniSwap:
             'gas': 0
         })
         module_str = 'Клеймим награды и стераем НФТ'
-        tx_bool = EVM.sending_tx(web3, tx, 'base', private_key, 1, module_str)
+        tx_bool = EVM.sending_tx(web3, tx, self.chain[name_pools], private_key, 1, module_str)
         if not tx_bool:
             time.sleep(5)
             log().error('Зафейлилась транза')

@@ -1,8 +1,8 @@
 import time
 
 from config import amount0, private_key, name_pools
-from main import mint, check_id_nft, approve_NFT, deposit_withdraw_nft, auto_, clear_nft
-from Strategy.strategy import lending_strategy
+from DeFI.aerodrome import mint, check_id_nft, approve_NFT, deposit_withdraw_nft, auto_, clear_nft
+from Strategy.strategy import lending_strategy_aero, lending_strategy_uni
 
 
 def mint_dep():
@@ -23,19 +23,19 @@ def approval():
 
 def main():
     print(''' 
-                        1) Mint + approve + deposit
+                        1) Mint + approve + deposit(aero)
                         
                         ----
                         
-                        2) withdraw + decreaseLiquidity + burn_nft
+                        2) withdraw + decreaseLiquidity + burn_nft(aero)
                         
                         ---
                         
-                        3) Auto
+                        3) Auto(aero)
                         
                         ---
                         
-                        4) Approve the NFT
+                        4) Approve the NFT(aero)
                         
                         ---
                         
@@ -55,14 +55,10 @@ def main():
                2: withdraw,
                3: auto_,
                4: approval,
-               5: lending_strategy,
-               6: lending_strategy
+               5: lending_strategy_aero,
+               6: lending_strategy_uni
                }
-    func = modules[modul]
-    if modul == 6:
-        func(True)
-    else:
-        func()
+    modules[modul]()
 
 
 if __name__ == '__main__':
