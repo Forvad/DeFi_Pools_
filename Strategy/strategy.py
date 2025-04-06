@@ -109,7 +109,7 @@ def lending_strategy_aero(Uni=False):
         pool_tick = check_pool_tick(name_pools)
         if end_ticker == 2:
             log().info('swap end WETH -> USDC')
-            swap(lending_aave.tokens['WETH'], lending_aave.tokens['USDC'], balance_WETH)
+            swap(lending_aave.tokens['WETH'], lending_aave.tokens['USDC'], balance_WETH, 'base')
             if lending_aave.user_data()[1]:
                 lending_aave.func_contract(1, 'USDC', 'repay')
             break
@@ -119,7 +119,8 @@ def lending_strategy_aero(Uni=False):
                 time.sleep(sleep_range[1])
             if balance_WETH / 10 ** 18 > amount0:
                 log().info('swap WETH -> USDC')
-                swap(lending_aave.tokens['WETH'], lending_aave.tokens['USDC'], int(balance_WETH - amount0 * 10 ** 18))
+                swap(lending_aave.tokens['WETH'], lending_aave.tokens['USDC'], int(balance_WETH - amount0 * 10 ** 18),
+                     'base')
         else:
             if sleep_range[0]:
                 log().info(f'SLEEP {sleep_range[0]} sek')
@@ -129,7 +130,7 @@ def lending_strategy_aero(Uni=False):
                 log().info('swap USDC -> WETH')
                 log().info(amount_swap)
                 if amount_swap > 10 * 10 ** 6:
-                    swap(lending_aave.tokens['USDC'], lending_aave.tokens['WETH'], amount_swap)
+                    swap(lending_aave.tokens['USDC'], lending_aave.tokens['WETH'], amount_swap, 'base')
             if pool_tick[1] < initial_tick:
                 first_pass = True
         time.sleep(3)
@@ -175,11 +176,13 @@ def lending_strategy_uni():
         time.sleep(10)
         uni_swap.test_withdraw(nft_id)
         time.sleep(5)
-        balance_WETH, _ = EVM.check_balance(private_key, 'base', lending_aave.tokens['WETH'])
+        balance_WETH, _ = EVM.check_balance(private_key, uni_swap.chain[name_pools],
+                                            uni_swap.pool_token[name_pools][0][0])
         pool_tick = uni_swap.check_pool_tick(name_pools)
         if end_ticker == 2:
             log().info('swap end WETH -> USDC')
-            swap(lending_aave.tokens['WETH'], lending_aave.tokens['USDC'], balance_WETH)
+            swap(uni_swap.pool_token[name_pools][0][0], uni_swap.pool_token[name_pools][1][0],
+                 balance_WETH, uni_swap.chain[name_pools])
             if lending_aave.user_data()[1]:
                 lending_aave.func_contract(1, 'USDC', 'repay')
             break
@@ -189,7 +192,8 @@ def lending_strategy_uni():
                 time.sleep(sleep_range[1])
             if balance_WETH / 10 ** 18 > amount0:
                 log().info('swap WETH -> USDC')
-                swap(lending_aave.tokens['WETH'], lending_aave.tokens['USDC'], int(balance_WETH - amount0 * 10 ** 18))
+                swap(uni_swap.pool_token[name_pools][0][0], uni_swap.pool_token[name_pools][1][0],
+                     int(balance_WETH - amount0 * 10 ** 18), uni_swap.chain[name_pools])
         else:
             if sleep_range[0]:
                 log().info(f'SLEEP {sleep_range[0]} sek')
@@ -199,7 +203,8 @@ def lending_strategy_uni():
                 log().info('swap USDC -> WETH')
                 log().info(amount_swap)
                 if amount_swap > 10 * 10 ** 6:
-                    swap(lending_aave.tokens['USDC'], lending_aave.tokens['WETH'], amount_swap)
+                    swap(uni_swap.pool_token[name_pools][1][0], uni_swap.pool_token[name_pools][0][0], amount_swap,
+                         uni_swap.chain[name_pools])
             if pool_tick[1] < initial_tick:
                 first_pass = True
         time.sleep(3)

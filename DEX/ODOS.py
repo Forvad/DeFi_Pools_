@@ -10,7 +10,8 @@ from Utils.EVMutils import EVM
 from config import private_key
 
 
-def swap(input_tokens, output_tokens, amount):
+def swap(input_tokens, output_tokens, amount, chain_):
+    chain = {'base': 8453, 'arbitrum': 42161, 'ethereum': 1}
     try:
         web3 = EVM.web3('base')
         wallet = web3.eth.account.from_key(private_key).address
@@ -22,7 +23,7 @@ def swap(input_tokens, output_tokens, amount):
         }
 
         data = {
-            "chainId": 8453,
+            "chainId": chain[chain_],
             "compact": True,
             "gasPrice": 200000,
             "inputTokens":
@@ -56,7 +57,7 @@ def swap(input_tokens, output_tokens, amount):
         }
         response_1 = requests.post('https://api.odos.xyz/sor/assemble', headers=headers, json=json_data)
         data_tx = response_1.json()['transaction']
-        EVM.approve(amount, private_key, 'base', input_tokens, data_tx['to'])
+        EVM.approve(amount, private_key, chain_, input_tokens, data_tx['to'])
         tx = {
             'data': data_tx['data'],
             'from': Web3.to_checksum_address(data_tx['from']),
@@ -67,16 +68,16 @@ def swap(input_tokens, output_tokens, amount):
             # 'gas': 0
         }
         module_str = f'Swap Token'
-        tx_bool = EVM.sending_tx(web3, tx, 'base', private_key, 1, module_str)
+        tx_bool = EVM.sending_tx(web3, tx, chain_, private_key, 1, module_str)
         if not tx_bool:
             log().error('The transaction failed')
             time.sleep(15)
-            return swap(input_tokens, output_tokens, amount)
+            return swap(input_tokens, output_tokens, amount, chain_)
         else:
             return True
     except BaseException as error:
         log().error(error)
         time.sleep(10)
-        return swap(input_tokens, output_tokens, amount)
+        return swap(input_tokens, output_tokens, amount, chain_)
 
 
