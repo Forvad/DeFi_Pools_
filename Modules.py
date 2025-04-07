@@ -2,7 +2,7 @@ import time
 
 from config import amount0, private_key, name_pools
 from DeFI.aerodrome import mint, check_id_nft, approve_NFT, deposit_withdraw_nft, auto_, clear_nft
-from Strategy.strategy import lending_strategy_aero, lending_strategy_uni
+from Strategy.strategy import lending_strategy_aero, lending_strategy_uni, burn_uni
 
 
 def mint_dep():
@@ -39,11 +39,15 @@ def main():
                         
                         ---
                         
-                        5) Strategy lending aerodrome
+                        5) decreaseLiquidity + burn_nft(UNI)
                         
                         ---
                         
-                        6) Strategy lending UniSwap
+                        6) Strategy lending aerodrome
+                        
+                        ---
+                        
+                        7) Strategy lending UniSwap
                         
                         ---
                         
@@ -55,8 +59,9 @@ def main():
                2: withdraw,
                3: auto_,
                4: approval,
-               5: lending_strategy_aero,
-               6: lending_strategy_uni
+               5: burn_uni,
+               6: lending_strategy_aero,
+               7: lending_strategy_uni
                }
     modules[modul]()
 

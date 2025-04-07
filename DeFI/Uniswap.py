@@ -97,13 +97,18 @@ class UniSwap:
         return int(pool_tick + percentages[1] * 100), int(pool_tick - percentages[1] * 100)
 
     @staticmethod
-    def check_id_nft():
+    def check_id_nft(liquidity=False):
         try:
             web3, contract = contract_withdrawal('nft_uni')
             wallet = web3.eth.account.from_key(private_key).address
             balance = contract.functions.balanceOf(wallet).call()
             if balance >= 1:
+                if liquidity:
+                    id_nft = contract.functions.tokenOfOwnerByIndex(wallet, balance - 1).call()
+                    return id_nft, contract.functions.positions(id_nft).call()[7]
                 return contract.functions.tokenOfOwnerByIndex(wallet, balance - 1).call()
+            if liquidity:
+                return None, None
         except BaseException as error:
             log().error(error)
             time.sleep(10)
@@ -158,6 +163,7 @@ class UniSwap:
                     'gas': 0
                 }
             )
+
             name = name_pools.split("-")
             module_str = (f'Mint NFT | {pool_tick[1]} / {tick_low} / {tick_high} | {round(amount0_ / 10 ** decimal1, 5)} '
                           f'{name[0]} | {round(amount1_ / 10 **  decimal2, 5)} {name[1]}')
@@ -235,78 +241,66 @@ class UniSwap:
             return self.create_tx(tick_low, tick_high, address)
 
     def test_withdraw(self, id_nft, retry=0):
-        while not id_nft:
-            if not id_nft:
-                id_nft = self.check_id_nft()
-                log().error(f"Не передали NFT id ищем.... --- {id_nft}")
-            time.sleep(10)
-        web3, contract = contract_withdrawal('nft_uni')
-        max_token = 340282366920938463463374607431768211455
-        wallet = web3.eth.account.from_key(private_key).address
-        liquidity = int(contract.functions.positions(id_nft).call()[7])
-        tx_all = [
-                  contract.functions.decreaseLiquidity((id_nft, liquidity, 0, 0, int(time.time()) + 1_000)),
-                  contract.functions.collect((id_nft, wallet, max_token, max_token)),
-                  contract.functions.sweepToken(self.pool_token[name_pools][0][0], 0, wallet),
-                  contract.functions.sweepToken(self.pool_token[name_pools][1][0], 0, wallet),
-                  contract.functions.burn(id_nft)
-                  ]
-        bytes_tx = []
+        try:
+            while not id_nft:
+                if not id_nft:
+                    id_nft = self.check_id_nft()
+                    log().error(f"Не передали NFT id ищем.... --- {id_nft}")
+                time.sleep(10)
+            web3, contract = contract_withdrawal('nft_uni')
+            max_token = 340282366920938463463374607431768211455
+            wallet = web3.eth.account.from_key(private_key).address
+            liquidity = int(contract.functions.positions(id_nft).call()[7])
+            tx_all = [
+                      contract.functions.decreaseLiquidity((id_nft, liquidity, 0, 0, int(time.time()) + 1_000)),
+                      contract.functions.collect((id_nft, wallet, max_token, max_token)),
+                      contract.functions.sweepToken(self.pool_token[name_pools][0][0], 0, wallet),
+                      contract.functions.sweepToken(self.pool_token[name_pools][1][0], 0, wallet),
+                      contract.functions.burn(id_nft)
+                      ]
+            bytes_tx = []
 
-        for tx in tx_all:
-            bytes_tx.append(tx.build_transaction({
+            for tx in tx_all:
+                bytes_tx.append(tx.build_transaction({
+                    'from': wallet,
+                    'nonce': web3.eth.get_transaction_count(wallet),
+                    'chainId': web3.eth.chain_id,
+                    'gasPrice': web3.eth.gas_price,
+                    'gas': 0
+                })['data'])
+            tx = contract.functions.multicall(bytes_tx).build_transaction({
                 'from': wallet,
                 'nonce': web3.eth.get_transaction_count(wallet),
                 'chainId': web3.eth.chain_id,
                 'gasPrice': web3.eth.gas_price,
                 'gas': 0
-            })['data'])
-        tx = contract.functions.multicall(bytes_tx).build_transaction({
-            'from': wallet,
-            'nonce': web3.eth.get_transaction_count(wallet),
-            'chainId': web3.eth.chain_id,
-            'gasPrice': web3.eth.gas_price,
-            'gas': 0
-        })
-        module_str = 'Withdraw liquidity, claim rewards, and burn the NFT'
-        tx_bool = EVM.sending_tx(web3, tx, self.chain[name_pools], private_key, 1, module_str)
-        if not tx_bool:
-            time.sleep(5)
-            log().error('Filed tx')
-            if retry <= 3:
-                return self.test_withdraw(id_nft, retry + 1)
-            raise "Couldn't withdraw liquidity"
-        else:
-            time.sleep(5)
-            id_ = self.check_id_nft()
-            if id_:
-                if id_ == id_nft:
-                    return self.test_withdraw(id_nft)
-            return True
+            })
+            module_str = 'Withdraw liquidity, claim rewards, and burn the NFT'
+            tx_bool = EVM.sending_tx(web3, tx, self.chain[name_pools], private_key, 1, module_str)
+            if not tx_bool:
+                time.sleep(5)
+                log().error('Filed tx')
+                if retry <= 3:
+                    return self.test_withdraw(id_nft, retry + 1)
+                raise "Couldn't withdraw liquidity"
+            else:
+                time.sleep(5)
+                id_ = self.check_id_nft()
+                if id_:
+                    if id_ == id_nft:
+                        return self.test_withdraw(id_nft)
+                return True
+        except BaseException as error:
+            log().error(error)
+            if retry <= 5:
+                time.sleep(15)
+                return self.test_withdraw(id_nft)
+            else:
+                raise "Не прошло"
 
     def burn_nft(self, id_nft, retry=0):
         web3, contract = contract_withdrawal('nft_uni')
-        max_token = int(10 * 10 ** 25)
         wallet = web3.eth.account.from_key(private_key).address
-        # tx_all = [contract.functions.collect((id_nft, wallet, max_token, max_token)),
-        #           contract.functions.burn(id_nft)]
-        # bytes_tx = []
-        #
-        # for tx in tx_all:
-        #     bytes_tx.append(tx.build_transaction({
-        #         'from': wallet,
-        #         'nonce': web3.eth.get_transaction_count(wallet),
-        #         'chainId': web3.eth.chain_id,
-        #         'gasPrice': web3.eth.gas_price,
-        #         'gas': 0
-        #     })['data'])
-        # tx = contract.functions.multicall(bytes_tx).build_transaction({
-        #     'from': wallet,
-        #     'nonce': web3.eth.get_transaction_count(wallet),
-        #     'chainId': web3.eth.chain_id,
-        #     'gasPrice': web3.eth.gas_price,
-        #     'gas': 0
-        # })
         tx = contract.functions.burn(id_nft).build_transaction({
             'from': wallet,
             'nonce': web3.eth.get_transaction_count(wallet),
@@ -314,7 +308,7 @@ class UniSwap:
             'gasPrice': web3.eth.gas_price,
             'gas': 0
         })
-        module_str = 'Клеймим награды и стераем НФТ'
+        module_str = 'Burn the NFT'
         tx_bool = EVM.sending_tx(web3, tx, self.chain[name_pools], private_key, 1, module_str)
         if not tx_bool:
             time.sleep(5)

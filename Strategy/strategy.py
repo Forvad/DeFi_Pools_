@@ -208,3 +208,17 @@ def lending_strategy_uni():
             if pool_tick[1] < initial_tick:
                 first_pass = True
         time.sleep(3)
+
+
+def burn_uni():
+    uni = UniSwap()
+    while True:
+        id_nft, liquidity = uni.check_id_nft(True)
+        if id_nft:
+            if liquidity:
+                uni.test_withdraw(id_nft)
+            else:
+                uni.burn_nft(id_nft)
+        else:
+            break
+        time.sleep(5)

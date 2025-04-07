@@ -114,7 +114,7 @@ class EVM:
     def add_gas(web3: Web3, contract_txn: dict) -> dict or bool:
         """Adding gas to the transaction"""
         try:
-            pluser = [3, 5]
+            pluser = [2, 3]
             gasLimit = web3.eth.estimate_gas(contract_txn)
             contract_txn['gas'] = int(gasLimit * random.uniform(pluser[0], pluser[1]))
             return contract_txn
@@ -219,7 +219,7 @@ class EVM:
                 log().info(f'try again | {wallet}')
                 time.sleep(30)
                 return False
-        # contract_txn['gasPrice'] = int(contract_txn['gasPrice'] * 1.5)
+        contract_txn['gasPrice'] = int(contract_txn['gasPrice'] * 1.5)
         try:
             tx_hash = EVM.sign_tx(web3, contract_txn, private_key)
         except BaseException as error:
