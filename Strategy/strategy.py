@@ -4,7 +4,7 @@ from Contract.Contracts import contract_withdrawal
 from DB.db import NFTDatabase
 from Lending.aave import AAVE
 from Utils.EVMutils import EVM
-from config import private_key, amount0, name_pools, percentages_, min_tick, sleep_range, low_buy, proxy, constant_cycle
+from config import private_key, amount0, name_pools, percentages_, min_tick, sleep_range, low_buy, constant_cycle
 from Log.Loging import log
 from DeFI.aerodrome import check_pool_tick, calculation_tick, mint, \
     check_id_nft, deposit_withdraw_nft, test_withdraw
@@ -59,7 +59,7 @@ def lending_strategy_aero(Uni=False):
     lending_aave = AAVE(private_key)
     pool_tick = check_pool_tick(name_pools)
     initial_tick = pool_tick[1]
-    uni_swap = UniSwap(proxy)
+    uni_swap = UniSwap()
     first_pass = False
     while True:
         nft_ = check_nft()
@@ -137,7 +137,7 @@ def lending_strategy_aero(Uni=False):
 
 
 def lending_strategy_uni():
-    uni_swap = UniSwap(proxy)
+    uni_swap = UniSwap()
     lending_aave = AAVE(private_key)
     pool_tick = uni_swap.check_pool_tick(name_pools)
     initial_tick = pool_tick[1]
