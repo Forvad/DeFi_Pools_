@@ -16,7 +16,7 @@ RPC = {
     'polygon_zkevm': {'rpc': 'https://zkevm-rpc.com', 'scan': 'https://zkevm.polygonscan.com/tx', 'token': 'ETH',
                       'chain_id': 1101},
 
-    'arbitrum': {'rpc': 'https://arbitrum-one-rpc.publicnode.com',
+    'arbitrum': {'rpc': 'https://rpc.ankr.com/arbitrum/fd19dfb86f4594734450a702d44c7aafce0f214bdffebf666358b41b18d91068',
                  'scan': 'https://arbiscan.io/tx', 'token': 'ETH', 'chain_id': 42161},
 
     'avalanche': {'rpc': 'https://rpc.ankr.com/avalanche/1b5254e0092947d451d7140fbdef0d879e662f3ce9d97f183f3eb5'
@@ -70,4 +70,5 @@ RPC = {
              'chain_id': 8453},
     # developer-access-mainnet.base.org
     #h ttps://rpc.ankr.com/base/fd19dfb86f4594734450a702d44c7aafce0f214bdffebf666358b41b18d91068
+    # https://arbitrum-one-rpc.publicnode.com
 }
