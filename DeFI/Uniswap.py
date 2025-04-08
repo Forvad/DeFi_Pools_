@@ -91,10 +91,10 @@ class UniSwap:
     @staticmethod
     def calculation_tick(pool_tick, percentages):
         pool_tick -= pool_tick % 10
-        for i in percentages:
-            if i < 0.1:
-                raise 'The percentage must be higher than 0.1'
-        return int(pool_tick + percentages[1] * 100), int(pool_tick - percentages[1] * 100)
+        # for i in percentages:
+        #     if i < 0.1:
+        #         raise 'The percentage must be higher than 0.1'
+        return int(pool_tick + percentages[0] * 100), int(pool_tick - percentages[1] * 100)
 
     @staticmethod
     def check_id_nft(liquidity=False):
@@ -121,7 +121,11 @@ class UniSwap:
             wallet = web3.eth.account.from_key(private_key).address
             pool_tick = self.check_pool_tick(name_pools)
             tick_high, tick_low = self.calculation_tick(pool_tick[1], percentages_)
-            amount1_ = self.check_amount1(pool_tick, tick_low, tick_high, int(amount0_))
+            if pool_tick[1] <= tick_low:
+                amount1_ = 0
+            else:
+                amount1_ = self.check_amount1(pool_tick, tick_low, tick_high, int(amount0_))
+            log().info(f'{pool_tick[1], tick_high, tick_low}')
             balance_1, decimal1 = EVM.check_balance(private_key, self.chain[name_pools], self.pool_token[name_pools][0][0])
             balance_2, decimal2 = EVM.check_balance(private_key, self.chain[name_pools], self.pool_token[name_pools][1][0])
             for i in self.pool_token[name_pools]:
