@@ -4,7 +4,8 @@ from Contract.Contracts import contract_withdrawal
 from DB.db import NFTDatabase
 from Lending.aave import AAVE
 from Utils.EVMutils import EVM
-from config import private_key, amount0, name_pools, percentages_, min_tick, sleep_range, low_buy, constant_cycle
+from config import private_key, amount0, name_pools, percentages_, min_tick, sleep_range, low_buy, constant_cycle, \
+    low_sale
 from Log.Loging import log
 from DeFI.aerodrome import check_pool_tick, calculation_tick, mint, \
     check_id_nft, deposit_withdraw_nft, test_withdraw
@@ -41,10 +42,10 @@ def check_tick(tick_high, low_tick, initial_tick=None, first_pass=False, uni=Non
     log().info(f'pool tick: {pool_tick} | high tick: {tick_high} {"| " + str(initial_tick) if initial_tick else ""}')
     if pool_tick >= tick_high:
         return False, 1
-    elif initial_tick and first_pass:
+    elif initial_tick and first_pass and not low_sale:
         if initial_tick + min_tick * -100 >= pool_tick and not constant_cycle:
             return False, 2
-        elif pool_tick <= low_tick:
+        elif pool_tick <= low_tick and not low_sale:
             return False, 3
         else:
             return True, 0

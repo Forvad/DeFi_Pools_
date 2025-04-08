@@ -1,12 +1,15 @@
-percentages_ = [0.3, 0.3]  # hiht, low
+percentages_ = [0.6, -0.2]  # hiht, low
 
 min_tick = 0  # %
 
 sleep_range = [300, 500]  # hiht, low
 
-low_buy = True
+low_buy = False  # откртие нижних тиков с 1 сделки
 
-constant_cycle = True  # работа без выхода в бу
+constant_cycle = False  # работа без выхода в бу
+
+low_sale = True  # для работы с неактивными тиками
+
 
 amount0 = 0.078
 
