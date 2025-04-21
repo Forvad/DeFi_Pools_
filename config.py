@@ -1,17 +1,19 @@
-percentages_ = [0.6, -0.2]  # hiht, low
+proxy = ""
 
-min_tick = 0  # %
+percentages_ = [0.2, 0.2]  # high, low
 
-sleep_range = [300, 500]  # hiht, low
+min_tick = 0  # добавление + к выходу в бу в %
 
-low_buy = False  # откртие нижних тиков с 1 сделки
+sleep_range = [300, 500]
 
-constant_cycle = False  # работа без выхода в бу
+low_buy = True  # откртие нижних тиков с 1 сделки
 
-low_sale = True  # для работы с неактивными тиками
+constant_cycle = True  # работа без выхода в бу
+
+low_sale = False  # для работы с неактивными тиками
 
 
-amount0 = 0.078
+amount0 = 50
 
 auto_amount = True
 
@@ -21,7 +23,9 @@ processingTime = [30, 60]  # время ожидания, время фарма;
 
 private_key = ''
 
-name_pools = 'ETH-USDC-arb'  # aero: ETH-USDC, ETH-cbBTC, VIRTUAL-ETH; uni: ETH-USDC-arb, ETH-USDC-base, ETH-USDC-eth
+name_pools = 'USDT-WBTC-uni'
+# aero: ETH-USDC, ETH-cbBTC, VIRTUAL-ETH, USDC-cbBTC;
+# uni: ETH-USDC-arb, ETH-USDC-base,ETH-USDC-eth, ETH-wstETH-uni, USDC-WBTC-uni, USDT-WBTC-uni
 
 random_sleep = True
 

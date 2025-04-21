@@ -11,7 +11,7 @@ from config import private_key
 
 
 def swap(input_tokens, output_tokens, amount, chain_):
-    chain = {'base': 8453, 'arbitrum': 42161, 'ethereum': 1}
+    chain = {'base': 8453, 'arbitrum': 42161, 'ethereum': 1, "uni": 130}
     try:
         web3 = EVM.web3(chain_)
         wallet = web3.eth.account.from_key(private_key).address
@@ -47,7 +47,7 @@ def swap(input_tokens, output_tokens, amount, chain_):
         }
 
         response = requests.post(url, headers=headers, data=json.dumps(data))
-
+        log().info(response.json())
         pathId = response.json()['pathId']
         json_data = {
             "pathId": pathId,

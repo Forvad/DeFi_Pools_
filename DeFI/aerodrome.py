@@ -1,6 +1,8 @@
 import random
 import time
 
+from web3 import Web3
+
 from Utils.EVMutils import EVM
 from Log.Loging import log, inv_log
 from config import (percentages_,  amount0, processingTime, private_key, name_pools, auto_amount, random_sleep,
@@ -11,7 +13,8 @@ from web3.exceptions import ContractLogicError
 
 addresses_pools = {'ETH-USDC': '0xb2cc224c1c9feE385f8ad6a55b4d94E92359DC59',
                    'ETH-cbBTC': '0x70aCDF2Ad0bf2402C957154f944c19Ef4e1cbAE1',
-                   "VIRTUAL-ETH": "0x3f0296BF652e19bca772EC3dF08b32732F93014A"
+                   "VIRTUAL-ETH": "0x3f0296BF652e19bca772EC3dF08b32732F93014A",
+                   'USDC-cbBTC': '0x4e962BB3889Bf030368F56810A9c96B83CB3E778'
                    }
 pool_token = {'ETH-USDC': [['0x4200000000000000000000000000000000000006', '0x827922686190790b37229fd06084350E74485b72'],
                            ['0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', '0x827922686190790b37229fd06084350E74485b72']],
@@ -19,7 +22,13 @@ pool_token = {'ETH-USDC': [['0x4200000000000000000000000000000000000006', '0x827
                             ['0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf', '0x827922686190790b37229fd06084350E74485b72']],
               'VIRTUAL-ETH': [
                   ['0x0b3e328455c4059EEb9e3f84b5543F74E24e7E1b', '0x827922686190790b37229fd06084350E74485b72'],
-                  ['0x4200000000000000000000000000000000000006', '0x827922686190790b37229fd06084350E74485b72']]
+                  ['0x4200000000000000000000000000000000000006', '0x827922686190790b37229fd06084350E74485b72']],
+              'USDC-cbBTC':
+                  [
+                      ['0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', '0x827922686190790b37229fd06084350E74485b72'],
+                    ['0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf', '0x827922686190790b37229fd06084350E74485b72']
+              ]
+
               }
 
 
@@ -36,7 +45,7 @@ def check_pool_tick(name_pool):
 def check_amount1(pool_tick, tickLow, tickHigh, value, address_pool):
     _, contract = contract_withdrawal('check_amount1')
     return contract.functions.estimateAmount1(value,
-                                              address_pool,
+                                              Web3.to_checksum_address(address_pool),
                                               pool_tick[0],
                                               tickLow,
                                               tickHigh).call()
@@ -45,7 +54,7 @@ def check_amount1(pool_tick, tickLow, tickHigh, value, address_pool):
 def check_amount0(pool_tick, tickLow, tickHigh, value, address_pool):
     _, contract = contract_withdrawal('check_amount1')
     return contract.functions.estimateAmount0(value,
-                                              address_pool,
+                                              Web3.to_checksum_address(address_pool),
                                               pool_tick[0],
                                               tickLow,
                                               tickHigh).call()
@@ -70,7 +79,8 @@ def calculation_tick(pool_tick, percentages):
 
 
 def mint(amount, private_key, name_poll, retry=0, check_amount=False):
-    amount0_ = int(amount * 10 ** 18)
+    balance_1, decimal1 = EVM.check_balance(private_key, 'base', pool_token[name_poll][0][0])
+    amount0_ = int(amount * 10 ** decimal1)
     web3, contract = contract_withdrawal('nft')
     wallet = web3.eth.account.from_key(private_key).address
     while True:
@@ -88,9 +98,6 @@ def mint(amount, private_key, name_poll, retry=0, check_amount=False):
                 percentages_[1] = int(input('введите минимум %: '))
         else:
             break
-
-    balance_1, decimal1 = EVM.check_balance(private_key, 'base', pool_token[name_poll][0][0])
-    balance_2, decimal2 = EVM.check_balance(private_key, 'base', pool_token[name_poll][1][0])
     for i in pool_token[name_poll]:
         if i == 0:
             amounts = amount0_

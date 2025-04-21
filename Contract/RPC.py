@@ -68,6 +68,8 @@ RPC = {
     'base': {'rpc': 'https://developer-access-mainnet.base.org',
              'scan': 'https://basescan.org/tx', 'token': 'ETH',
              'chain_id': 8453},
+
+    'uni': {'rpc': 'https://mainnet.unichain.org', 'scan': 'https://uniscan.xyz/tx', 'token': 'ETH', 'chain_id': 130},
     # developer-access-mainnet.base.org
     #h ttps://rpc.ankr.com/base/fd19dfb86f4594734450a702d44c7aafce0f214bdffebf666358b41b18d91068
     # https://arbitrum-one-rpc.publicnode.com
