@@ -23,9 +23,10 @@ processingTime = [30, 60]  # время ожидания, время фарма;
 
 private_key = ''
 
-name_pools = 'USDT-WBTC-uni'
+name_pools = 'ETH-USDT-uni'
 # aero: ETH-USDC, ETH-cbBTC, VIRTUAL-ETH, USDC-cbBTC;
-# uni: ETH-USDC-arb, ETH-USDC-base,ETH-USDC-eth, ETH-wstETH-uni, USDC-WBTC-uni, USDT-WBTC-uni
+# uni: ETH-USDC-arb, ETH-USDC-base,ETH-USDC-eth, ETH-wstETH-uni, ETH-weETH-uni, USDC-WBTC-uni, USDT-WBTC-uni,
+# ETH-USDT-uni, ETH-USDC-uni
 
 random_sleep = True
 

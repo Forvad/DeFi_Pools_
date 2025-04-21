@@ -51,13 +51,22 @@ class UniSwap:
             ],
         ],
                   }
-    fee_pool = {'ETH-wstETH-uni': 100, 'USDC-WBTC-uni': 3000, 'USDT-WBTC-uni': 500}
-    uni_V4 = {'ETH-wstETH-uni': ['0x0000000000000000000000000000000000000000',
-                                 '0xc02fe7317d4eb8753a02c35fe019786854a92001'],
-              'USDC-WBTC-uni': ['0x078D782b760474a361dDA0AF3839290b0EF57AD6',
-                                '0x927B51f251480a681271180DA4de28D44EC4AfB8'],
-              'USDT-WBTC-uni': ['0x9151434b16b9763660705744891fA906F660EcC5',
-                                '0x927B51f251480a681271180DA4de28D44EC4AfB8']}
+    fee_pool = {'ETH-wstETH-uni': 100, 'ETH-weETH-uni': 100, 'USDC-WBTC-uni': 3000, 'USDT-WBTC-uni': 500,
+                'ETH-USDT-uni': 500, 'ETH-USDC-uni': 500}
+    uni_V4 = {
+        'ETH-wstETH-uni': ['0x0000000000000000000000000000000000000000',
+                           '0xc02fe7317d4eb8753a02c35fe019786854a92001'],
+        'ETH-weETH-uni': ['0x0000000000000000000000000000000000000000',
+                          '0x7DCC39B4d1C53CB31e1aBc0e358b43987FEF80f7'],
+        'ETH-USDT-uni': ['0x0000000000000000000000000000000000000000',
+                         '0x9151434b16b9763660705744891fA906F660EcC5'],
+        'ETH-USDC-uni': ['0x0000000000000000000000000000000000000000',
+                         '0x078D782b760474a361dDA0AF3839290b0EF57AD6'],
+        'USDC-WBTC-uni': ['0x078D782b760474a361dDA0AF3839290b0EF57AD6',
+                          '0x927B51f251480a681271180DA4de28D44EC4AfB8'],
+        'USDT-WBTC-uni': ['0x9151434b16b9763660705744891fA906F660EcC5',
+                          '0x927B51f251480a681271180DA4de28D44EC4AfB8']
+    }
 
     def __init__(self):
         self.session = requests.Session()
